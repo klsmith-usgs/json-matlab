@@ -143,8 +143,8 @@ if __name__ == '__main__':
         cpu_count = raw_input('Number of CPU: ')
     else:
         output_dir = sys.argv[1]
-        h = sys.argv[2]
-        v = sys.argv[3]
-        cpu_count = sys.argv[4]
+        h = int(sys.argv[2])
+        v = int(sys.argv[3])
+        cpu_count = int(sys.argv[4])
 
     run(output_dir, h, v, cpu_count)
