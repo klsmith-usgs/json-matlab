@@ -213,4 +213,4 @@ def extent_from_hv(h, v, loc='conus'):
                         .format(loc))
 
     return (GeoExtent(x_min=xmin, x_max=xmax, y_max=ymax, y_min=ymin),
-            GeoAffine(ul_x=xmin, x_res=30, rot_1=0, ul_y=ymax, rot_2=0, y_res=30))
+            GeoAffine(ul_x=xmin, x_res=30, rot_1=0, ul_y=ymax, rot_2=0, y_res=-30))
