@@ -9,8 +9,8 @@ __HOST__ = r'http://lcmap-test.cr.usgs.gov/changes/results'
 __ALGORITHM__ = r'lcmap-pyccd:1.1.0'
 
 
-retries = Retry(total=5,
-                backoff_factor=0.1,
+retries = Retry(total=20,
+                backoff_factor=0.5,
                 status_forcelist=[500, 502, 503, 504])
 
 
