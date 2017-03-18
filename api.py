@@ -1,5 +1,7 @@
 import json
 import requests
+from requests.packages.urllib3.util.retry import Retry
+from requests.adapters import HTTPAdapter
 
 from geo_utils import extent_from_hv
 
@@ -7,11 +9,19 @@ __HOST__ = r'http://lcmap-test.cr.usgs.gov/changes/results'
 __ALGORITHM__ = r'lcmap-pyccd:1.1.0'
 
 
+retries = Retry(total=5,
+                backoff_factor=0.1,
+                status_forcelist=[500, 502, 503, 504])
+
+
 def api_request(x, y, refresh=False):
+    s = requests.Session()
+    s.mount('http://', HTTPAdapter(max_retries=retries))
+
     endpoint = '/'.join([__HOST__, __ALGORITHM__, str(x), str(y)]) +\
                '?refresh={}'.format(str(refresh).lower())
 
-    resp = requests.get(endpoint)
+    resp = s.get(endpoint)
     
     return resp.json()
 
