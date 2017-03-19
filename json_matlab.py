@@ -63,7 +63,7 @@ def build_spectral(model, band_names=BAND_NAMES):
 
 
 def worker(args):
-    pid = mp.current_process()
+    pid = mp.current_process().name
     t = time.time()
 
     try:
