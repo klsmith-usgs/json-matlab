@@ -1,6 +1,7 @@
 import sys
 import os
 import multiprocessing as mp
+import time
 
 import scipy.io as sio
 
@@ -63,6 +64,7 @@ def build_spectral(model, band_names=BAND_NAMES):
 
 def worker(args):
     pid = mp.current_process()
+    t = time.time()
 
     try:
         output_path, h, v, line = args
@@ -95,7 +97,7 @@ def worker(args):
                 record['category'].append(model['curve_qa'])
                 record['magnitude'].append(mags)
 
-        print '{}: writing line: {}'.format(pid, line)
+        print '{}: writing line: {}, time: {}'.format(pid, line, time.time() - t)
         save_record(outfile, record)
 
     except Exception as e:
@@ -114,13 +116,13 @@ def run(output_path, h, v, cpu_count):
 if __name__ == '__main__':
     if len(sys.argv) < 2 or len(sys.argv) > 5:
         output_dir = raw_input('Output directory: ')
-        h = raw_input('ARD h: ')
-        v = raw_input('ARD v: ')
+        horiz = raw_input('ARD h: ')
+        vert = raw_input('ARD v: ')
         cpu_count = raw_input('Number of CPU: ')
     else:
         output_dir = sys.argv[1]
-        h = int(sys.argv[2])
-        v = int(sys.argv[3])
+        horiz = int(sys.argv[2])
+        vert = int(sys.argv[3])
         cpu_count = int(sys.argv[4])
 
-    run(output_dir, h, v, cpu_count)
+    run(output_dir, horiz, vert, cpu_count)
