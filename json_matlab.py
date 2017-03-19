@@ -104,11 +104,11 @@ def worker(args):
         print '{}: hit exception: {}'.format(pid, e)
 
 
-def run(output_path, h, v, cpu_count):
+def run(output_path, h, v, cpus):
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
-    pool = mp.Pool(processes=cpu_count)
+    pool = mp.Pool(processes=cpus)
 
     pool.map(worker, ((output_path, h, v, x) for x in range(5000)))
 
