@@ -2,6 +2,7 @@ import sys
 import os
 import multiprocessing as mp
 import time
+from functools import wraps
 
 import scipy.io as sio
 
@@ -16,6 +17,18 @@ BAND_NAMES = ('blue',
               'swir1',
               'swir2',
               'thermal')
+
+
+def retry(func, retries=5):
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+        count = 0
+        while True and count < retries:
+            try:
+                return func(*args, **kwargs)
+            except Exception:
+                count += 1
+    return wrapped
 
 
 def record_template():
@@ -62,6 +75,7 @@ def build_spectral(model, band_names=BAND_NAMES):
     return coefs, rmse, magnitude
 
 
+@retry
 def worker(args):
     pid = mp.current_process().name
     t = time.time()
@@ -104,13 +118,20 @@ def worker(args):
         print '{}: hit exception: {}'.format(pid, e)
 
 
-def run(output_path, h, v, cpus):
+def run(output_path, h, v, cpus, resume=True):
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
     pool = mp.Pool(processes=cpus)
 
-    pool.map(worker, ((output_path, h, v, x) for x in range(5000)))
+    lines = [l for l in range(5000)]
+
+    if resume is True:
+        for f in os.listdir(output_path):
+            line = int(f[13:-4]) - 1
+            lines.remove(line)
+
+    pool.map(worker, ((output_path, h, v, l) for l in lines))
 
 
 if __name__ == '__main__':
