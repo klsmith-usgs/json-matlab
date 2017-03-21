@@ -66,7 +66,9 @@ def seglength_val(models, ord_date, bot=beginning_of_time):
         all_dates.append(end_date)
 
     diff = [(query_date - d).days for d in all_dates]
-    print diff
+
+    if all((i < 0 for i in diff)):
+        return 0
 
     return min(i for i in diff if i > 0)
 
@@ -79,5 +81,8 @@ def lastchange_val(models, ord_date):
         break_dates.append(dt.date.fromordinal(m.break_day))
 
     diff = [(query_date - d).days for d in break_dates]
+
+    if all((i < 0 for i in diff)):
+        return 0
 
     return min(i for i in diff if i > 0)
