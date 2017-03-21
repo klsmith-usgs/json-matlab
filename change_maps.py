@@ -218,7 +218,7 @@ def multi_run(input_dir, output_dir, num_procs, h, v):
         input_q.put('kill')
 
     for _ in range(worker_count):
-        mp.Process(target=multi_worker, args=(input_q, output_q, msg_q, _)).start()
+        mp.Process(target=multi_worker, args=(input_q, output_q, _)).start()
 
     multi_output(output_dir, output_q, msg_q, worker_count, h, v)
 
