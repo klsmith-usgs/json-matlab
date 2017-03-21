@@ -238,4 +238,4 @@ if __name__ == '__main__':
     if cpu < 2:
         single_run(indir, outdir, horiz, vert)
     else:
-        multi_run(indir, outdir, cpu, horiz, vert)
+        multi_run(indir, outdir, int(cpu), int(horiz), int(vert))
