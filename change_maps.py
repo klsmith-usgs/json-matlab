@@ -157,26 +157,36 @@ def prod_data_type(product):
         raise ValueError
 
 
-def multi_output(output_dir, output_q, kill_count, h, v):
+def multi_output(output_dir, output_q, msg_q, kill_count, h, v):
     count = 0
     while True:
         if count >= kill_count:
             break
 
-        outdata = output_q.get()
+        outdata = output_q.get_nowait()
+        msg = msg_q.get_nowait()
 
-        if outdata == 'kill':
-            count += 1
-            continue
+        if outdata:
+            if outdata == 'kill':
+                count += 1
+                continue
 
-        LOGGER.debug('Outputting line: {0}'.format(outdata['y_off']))
-        output_line(outdata, output_dir, h, v)
+            # LOGGER.debug('Outputting line: {0}'.format(outdata['y_off']))
+            print 'Outputting line: {}'.format(outdata['y_off'])
+            output_line(outdata, output_dir, h, v)
+
+        if msg:
+            print msg
 
 
-def multi_worker(input_q, output_q):
+def multi_worker(input_q, output_q, msg_q):
+    pid = mp.current_process().name
+
     while True:
         try:
             infile = input_q.get()
+
+            msg_q.put('{}: received - {}'.format(pid, infile))
 
             if infile == 'kill':
                 output_q.put('kill')
@@ -187,9 +197,10 @@ def multi_worker(input_q, output_q):
             map_dict = changemap_vals(infile)
             map_dict['y_off'] = int(filename[13:-4])
 
+            msg_q.put('{}: finished - {}'.format(pid, infile))
             output_q.put(map_dict)
         except:
-            output_q.put('kill')
+            continue
 
 
 def single_run(input_dir, output_dir, h, v):
@@ -202,6 +213,7 @@ def single_run(input_dir, output_dir, h, v):
 def multi_run(input_dir, output_dir, num_procs, h, v):
     input_q = mp.Queue()
     output_q = mp.Queue()
+    msg_q = mp.Queue()
 
     worker_count = num_procs - 1
 
@@ -212,9 +224,9 @@ def multi_run(input_dir, output_dir, num_procs, h, v):
         input_q.put('kill')
 
     for _ in range(worker_count):
-        mp.Process(target=multi_worker, args=(input_q, output_q)).start()
+        mp.Process(target=multi_worker, args=(input_q, output_q, msg_q)).start()
 
-    multi_output(output_dir, output_q, worker_count, h, v)
+    multi_output(output_dir, output_q, msg_q, worker_count, h, v)
 
 
 if __name__ == '__main__':
