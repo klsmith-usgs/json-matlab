@@ -44,7 +44,7 @@ def map_template():
         for yr in YEARS:
             ret[m][yr] = np.zeros(shape=(5000,))
 
-    return {}
+    return ret
 
 
 def open_matlab(file):
