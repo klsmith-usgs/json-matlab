@@ -3,6 +3,7 @@ Change Maps for CCDC visualizations
 """
 
 import os
+import sys
 import logging
 import multiprocessing as mp
 import datetime as dt
@@ -174,18 +175,21 @@ def multi_output(output_dir, output_q, kill_count, h, v):
 
 def multi_worker(input_q, output_q):
     while True:
-        infile = input_q.get()
+        try:
+            infile = input_q.get()
 
-        if infile == 'kill':
+            if infile == 'kill':
+                output_q.put('kill')
+                break
+
+            filename = os.path.split(infile)[-1]
+
+            map_dict = changemap_vals(infile)
+            map_dict['y_off'] = int(filename[13:-4])
+
+            output_q.put(map_dict)
+        except:
             output_q.put('kill')
-            break
-
-        filename = os.path.split(infile)[-1]
-
-        map_dict = changemap_vals(infile)
-        map_dict['y_off'] = int(filename[13:-4])
-
-        output_q.put(map_dict)
 
 
 def single_run(input_dir, output_dir, h, v):
@@ -214,11 +218,18 @@ def multi_run(input_dir, output_dir, num_procs, h, v):
 
 
 if __name__ == '__main__':
-    indir = raw_input('Input directory: ')
-    outdir = raw_input('Output directory: ')
-    cpu = raw_input('Number of CPU\'s: ')
-    horiz = raw_input('H: ')
-    vert = raw_input('V: ')
+    if len(sys.argv) < 6:
+        indir = raw_input('Input directory: ')
+        outdir = raw_input('Output directory: ')
+        cpu = raw_input('Number of CPU\'s: ')
+        horiz = raw_input('H: ')
+        vert = raw_input('V: ')
+    else:
+        indir = sys.argv[1]
+        outdir = sys.argv[2]
+        cpu = sys.argv[3]
+        horiz = sys.argv[4]
+        vert = sys.argv[5]
 
     if cpu < 2:
         single_run(indir, outdir, horiz, vert)
