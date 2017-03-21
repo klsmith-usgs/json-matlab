@@ -3,16 +3,16 @@ Change Maps for CCDC visualizations
 """
 
 import os
-import datetime
 import logging
 import multiprocessing as mp
-import urllib2
-import json
+import datetime as dt
 
 from osgeo import gdal, osr
 import numpy as np
+import scipy.io as sio
 
 import geo_utils
+import change_products
 
 
 LOGGER = logging.getLogger()
@@ -26,57 +26,84 @@ LOGGER.setLevel(logging.DEBUG)
 __HOST__ = r'http://lcmap-test.cr.usgs.gov/changes/results'
 __ALGORITHM__ = r'lcmap-pyccd:1.1.0'
 
-
 CONUS_ALBERS = osr.SpatialReference()
 CONUS_ALBERS.ImportFromEPSG(5070)
 
-
-def api_request(x, y, host=__HOST__, algorithm=__ALGORITHM__):
-    endpoint = '/'.join([host, algorithm, str(x), str(y)])
-
-    request = urllib2.Request(endpoint)
-
-    try:
-        result = urllib2.urlopen(request)
-    except urllib2.HTTPError:
-        raise
-
-    return json.loads(result.read())
+MAP_NAMES = ('ChangeMap', 'ChangeMagMap', 'QAMap', 'SegLength', 'LastChange')
+YEARS = tuple(i for i in range(1984, 2017))
+QUERY_DATES = tuple(dt.date(year=i, month=7, day=1).toordinal()
+                    for i in YEARS)
 
 
-def create_changemap_dict(x, y):
-    map_names = ('ChangeMap', 'ChangeMagMap', 'QAMap', 'NumberMap', 'LastChange')
+def map_template():
+    ret = {}
 
-    def add_year(year):
-        for c in map_names:
-            if year not in changemaps[c]:
-                changemaps[c][year] = 0
+    for m in MAP_NAMES:
+        ret[m] = {}
+        for yr in YEARS:
+            ret[m][yr] = np.zeros(shape=(5000,))
 
-    api_ret = api_request(x, y)
-
-    changemaps = {'y': y,
-                  'x': x,
-                  'ChangeMap': {},
-                  'ChangeMagMap': {},
-                  'QAMap': {},
-                  'NumberMap': {},
-                  'LastChange': {}
-                  }
-
-    if api_ret['result_ok'] is False:
-        return changemaps
-
-    results = json.loads(api_ret['result'])
-
-    for model in results['change_models']:
-        pass
-
-    return changemaps
+    return {}
 
 
-def output_maps(data, output_dir, h, v):
-    y = data.pop('y')
-    x = data.pop('x')
+def open_matlab(file):
+    return sio.loadmat(file, squeeze_me=True)
+
+
+def mat_to_changemodel(t_start, t_end, t_break, category, magnitudes):
+    return change_products.ChangeModel(t_start - 366,
+                                       t_end - 366,
+                                       t_break - 366,
+                                       category,
+                                       magnitudes)
+
+
+def changemap_vals(input, query_dates=QUERY_DATES):
+    temp = map_template()
+
+    data = open_matlab(input)['rec_cg']
+
+    x_locs = np.unique(data['pos'])
+    for x in x_locs:
+        model_locs = np.where(data['pos'] == x)[0]
+        arr_pos = (x - 1) % 5000
+
+        models = [mat_to_changemodel(data['t_start'][i],
+                                     data['t_end'][i],
+                                     data['t_break'][i],
+                                     data['category'][i],
+                                     data['magnitude'][i])
+                  for i in model_locs]
+
+        changedates = [change_products.changedate_val(models, qd)
+                       for qd in query_dates]
+
+        changemag = [change_products.changemag_val(models, qd)
+                     for qd in query_dates]
+
+        qa = [change_products.qa_val(models, qd)
+              for qd in query_dates]
+
+        seglength = [change_products.seglength_val(models, qd)
+                     for qd in query_dates]
+
+        lastchange = [change_products.lastchange_val(models, qd)
+                      for qd in query_dates]
+
+        for idx, qdate in enumerate(query_dates):
+            year = dt.date.fromordinal(qdate).year
+
+            temp['ChangeMap'][year][arr_pos] = changedates[idx]
+            temp['ChangeMagMap'][year][arr_pos] = changemag[idx]
+            temp['QAMap'][year][arr_pos] = qa[idx]
+            temp['SegLength'][year][arr_pos] = seglength[idx]
+            temp['LastChange'][year][arr_pos] = lastchange[idx]
+
+    return temp
+
+
+def output_line(data, output_dir, h, v):
+    y_off = data.pop('y_off')
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -117,8 +144,9 @@ def create_geotif(file_path, product, h, v, rows=5000, cols=5000, proj=CONUS_ALB
     return ds
 
 
+# MAP_NAMES = ('ChangeMap', 'ChangeMagMap', 'QAMap', 'SegLength', 'LastChange')
 def prod_data_type(product):
-    if product in ('ChangeMap', 'NumberMap', 'LastChange'):
+    if product in ('ChangeMap', 'NumberMap', 'LastChange', 'SegLength'):
         return gdal.GDT_UInt16
     elif product in ('ChangeMagMap', 'ConditionMap'):
         return gdal.GDT_Float32
@@ -128,7 +156,7 @@ def prod_data_type(product):
         raise ValueError
 
 
-def multi_output(output_dir, ref_image, output_q, kill_count):
+def multi_output(output_dir, output_q, kill_count, h, v):
     count = 0
     while True:
         if count >= kill_count:
@@ -141,7 +169,7 @@ def multi_output(output_dir, ref_image, output_q, kill_count):
             continue
 
         LOGGER.debug('Outputting line: {0}'.format(outdata['y_off']))
-        output_maps(outdata, output_dir, ref_image)
+        output_line(outdata, output_dir, h, v)
 
 
 def multi_worker(input_q, output_q):
@@ -152,19 +180,22 @@ def multi_worker(input_q, output_q):
             output_q.put('kill')
             break
 
-        change = ChangeMap().create_changemap_dict(infile)
+        filename = os.path.split(infile)[-1]
 
-        output_q.put(change)
+        map_dict = changemap_vals(infile)
+        map_dict['y_off'] = int(filename[13:-4])
+
+        output_q.put(map_dict)
 
 
-def single_run(input_dir, output_dir, ref_image):
+def single_run(input_dir, output_dir, h, v):
     for f in os.listdir(input_dir):
-        change = ChangeMap().create_changemap_dict(os.path.join(input_dir, f))
+        change = changemap_vals(f)
         LOGGER.debug('Outputting line: {0}'.format(change['y_off']))
-        output_maps(change, output_dir, ref_image)
+        output_line(change, output_dir, h, v)
 
 
-def multi_run(input_dir, output_dir, ref_image, num_procs):
+def multi_run(input_dir, output_dir, num_procs, h, v):
     input_q = mp.Queue()
     output_q = mp.Queue()
 
@@ -179,13 +210,17 @@ def multi_run(input_dir, output_dir, ref_image, num_procs):
     for _ in range(worker_count):
         mp.Process(target=multi_worker, args=(input_q, output_q)).start()
 
-    multi_output(output_dir, ref_image, output_q, worker_count)
+    multi_output(output_dir, output_q, worker_count, h, v)
 
 
 if __name__ == '__main__':
-    indir = r'D:\lcmap\matlab_compare\WA-08\zhe\TSFitMap'
-    outdir = r'D:\lcmap\matlab_compare\WA-08\klsmith\changemaps'
+    indir = raw_input('Input directory: ')
+    outdir = raw_input('Output directory: ')
+    cpu = raw_input('Number of CPU\'s: ')
+    horiz = raw_input('H: ')
+    vert = raw_input('V: ')
 
-    test_image = r'D:\lcmap\matlab_compare\WA-08\LT50460271990297\LT50460271990297PAC04_MTLstack'
-    # single_run(indir, outdir, test_image)
-    multi_run(indir, outdir, test_image, 4)
+    if cpu < 2:
+        single_run(indir, outdir, horiz, vert)
+    else:
+        multi_run(indir, outdir, 4, horiz, vert)
