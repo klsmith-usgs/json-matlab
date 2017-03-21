@@ -192,7 +192,7 @@ def multi_worker(input_q, output_q, name):
             LOGGER.debug('{} - finished {}'.format(name, infile))
             output_q.put(map_dict)
         except Exception as e:
-            LOGGER.debug('{} - exception {}'.format(name, e))
+            LOGGER.exception('{} - exception'.format(name))
             continue
 
 
