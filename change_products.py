@@ -66,6 +66,7 @@ def seglength_val(models, ord_date, bot=beginning_of_time):
         all_dates.append(end_date)
 
     diff = [(query_date - d).days for d in all_dates]
+    print diff
 
     return min(i for i in diff if i > 0)
 

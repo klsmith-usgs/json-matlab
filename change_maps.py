@@ -170,7 +170,6 @@ def multi_output(output_dir, output_q, kill_count, h, v):
             continue
 
         LOGGER.debug('Outputting line: {0}'.format(outdata['y_off']))
-        # print 'Outputting line: {}'.format(outdata['y_off'])
         output_line(outdata, output_dir, h, v)
 
 
@@ -207,7 +206,6 @@ def single_run(input_dir, output_dir, h, v):
 def multi_run(input_dir, output_dir, num_procs, h, v):
     input_q = mp.Queue()
     output_q = mp.Queue()
-    msg_q = mp.Queue()
 
     worker_count = num_procs - 1
 
@@ -220,7 +218,7 @@ def multi_run(input_dir, output_dir, num_procs, h, v):
     for _ in range(worker_count):
         mp.Process(target=multi_worker, args=(input_q, output_q, _)).start()
 
-    multi_output(output_dir, output_q, msg_q, worker_count, h, v)
+    multi_output(output_dir, output_q, worker_count, h, v)
 
 
 if __name__ == '__main__':
@@ -240,4 +238,4 @@ if __name__ == '__main__':
     if cpu < 2:
         single_run(indir, outdir, horiz, vert)
     else:
-        multi_run(indir, outdir, 4, horiz, vert)
+        multi_run(indir, outdir, cpu, horiz, vert)
