@@ -62,11 +62,12 @@ def mat_to_changemodel(t_start, t_end, t_break, category, magnitudes):
 def determine_coverage(line_num, positions):
     coverage = np.ones(shape=(5000,))
 
-    rng_min = (line_num - 1) * 5000
-    rng_max = line_num + 4999
-    complete = set(range(rng_min, rng_max + 1))
+    rng_min = ((line_num - 1) * 5000) + 1
+    rng_max = (line_num + 4999) + 1
+    complete = set(range(rng_min, rng_max))
     diff = sorted(complete.difference(positions))
 
+    diff = [d - 1 for d in diff]
     coverage[diff] = 0
 
     return coverage
