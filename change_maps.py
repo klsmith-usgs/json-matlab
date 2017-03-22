@@ -59,10 +59,26 @@ def mat_to_changemodel(t_start, t_end, t_break, category, magnitudes):
                                        magnitudes)
 
 
+def determine_coverage(line_num, positions):
+    coverage = np.ones(shape=(5000,))
+
+    rng_min = (line_num - 1) * 5000
+    rng_max = line_num + 4999
+    complete = set(range(rng_min, rng_max + 1))
+    diff = sorted(complete.difference(positions))
+
+    coverage[diff] = 0
+
+    return coverage
+
+
 def changemap_vals(input, query_dates=QUERY_DATES):
     temp = map_template()
 
     data = open_matlab(input)['rec_cg']
+
+    line = int(os.path.split(input)[-1][13:-4])
+
 
     x_locs = np.unique(data['pos'])
     for x in x_locs:
@@ -100,10 +116,12 @@ def changemap_vals(input, query_dates=QUERY_DATES):
             temp['SegLength'][year][arr_pos] = seglength[idx]
             temp['LastChange'][year][arr_pos] = lastchange[idx]
 
-    return temp
+    coverage = determine_coverage(line, x_locs)
+
+    return temp, coverage
 
 
-def output_line(data, output_dir, h, v):
+def output_line(data, coverage, output_dir, h, v):
     y_off = data.pop('y_off')
 
     if not os.path.exists(output_dir):
@@ -116,6 +134,11 @@ def output_line(data, output_dir, h, v):
 
             ds.FlushCache()
             ds = None
+
+    ds = get_raster_ds(output_dir, 'coverage', '', h, v)
+    ds.GetRasterBand(1).WriteArray(coverage.reshape(1, 5000), 0, y_off)
+    ds.FlushCache()
+    ds = None
 
 
 def get_raster_ds(output_dir, product, year, h, v):
@@ -163,14 +186,14 @@ def multi_output(output_dir, output_q, kill_count, h, v):
         if count >= kill_count:
             break
 
-        outdata = output_q.get()
+        outdata, coverage = output_q.get()
 
         if outdata == 'kill':
             count += 1
             continue
 
         LOGGER.debug('Outputting line: {0}'.format(outdata['y_off']))
-        output_line(outdata, output_dir, h, v)
+        output_line(outdata, coverage, output_dir, h, v)
 
 
 def multi_worker(input_q, output_q, name):
@@ -181,16 +204,16 @@ def multi_worker(input_q, output_q, name):
             LOGGER.debug('{} - received {}'.format(name, infile))
 
             if infile == 'kill':
-                output_q.put('kill')
+                output_q.put(('kill', ''))
                 break
 
             filename = os.path.split(infile)[-1]
 
-            map_dict = changemap_vals(infile)
+            map_dict, coverage = changemap_vals(infile)
             map_dict['y_off'] = int(filename[13:-4])
 
             LOGGER.debug('{} - finished {}'.format(name, infile))
-            output_q.put(map_dict)
+            output_q.put((map_dict, coverage))
         except Exception as e:
             LOGGER.exception('{} - exception'.format(name))
             continue
