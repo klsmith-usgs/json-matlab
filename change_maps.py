@@ -54,7 +54,7 @@ def open_matlab(file):
 def mat_to_changemodel(t_start, t_end, t_break, category, magnitudes):
     return change_products.ChangeModel(t_start - 366,
                                        t_end - 366,
-                                       t_break - 366,
+                                       t_break - 366 if t_break > 0 else 0,
                                        category,
                                        magnitudes)
 
@@ -174,7 +174,7 @@ def prod_data_type(product):
         return gdal.GDT_UInt16
     elif product in ('ChangeMagMap', 'ConditionMap'):
         return gdal.GDT_Float32
-    elif product in ('CoverMap', 'CoverQAMap', 'QAMap'):
+    elif product in ('CoverMap', 'CoverQAMap', 'QAMap', 'coverage'):
         return gdal.GDT_Byte
     else:
         raise ValueError
