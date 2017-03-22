@@ -54,7 +54,7 @@ def open_matlab(file):
 def mat_to_changemodel(t_start, t_end, t_break, category, magnitudes):
     return change_products.ChangeModel(t_start - 366,
                                        t_end - 366,
-                                       t_break - 366 if t_break > 0 else 0,
+                                       t_break - 366 if t_break > 366 else 0,
                                        category,
                                        magnitudes)
 
@@ -211,7 +211,7 @@ def multi_worker(input_q, output_q, name):
             filename = os.path.split(infile)[-1]
 
             map_dict, coverage = changemap_vals(infile)
-            map_dict['y_off'] = int(filename[13:-4])
+            map_dict['y_off'] = int(filename[13:-4]) - 1
 
             LOGGER.debug('{} - finished {}'.format(name, infile))
             output_q.put((map_dict, coverage))
