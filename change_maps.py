@@ -29,6 +29,7 @@ __ALGORITHM__ = r'lcmap-pyccd:1.1.0'
 
 CONUS_ALBERS = osr.SpatialReference()
 CONUS_ALBERS.ImportFromEPSG(5070)
+CONUS_WKT = CONUS_ALBERS.ExportToWkt()
 
 MAP_NAMES = ('ChangeMap', 'ChangeMagMap', 'QAMap', 'SegLength', 'LastChange')
 YEARS = tuple(i for i in range(1984, 2017))
@@ -155,7 +156,7 @@ def get_raster_ds(output_dir, product, year, h, v):
     return ds
 
 
-def create_geotif(file_path, product, h, v, rows=5000, cols=5000, proj=CONUS_ALBERS.ExportToWkt()):
+def create_geotif(file_path, product, h, v, rows=5000, cols=5000, proj=CONUS_WKT):
     data_type = prod_data_type(product)
     _, geo = geo_utils.extent_from_hv(h, v)
 
