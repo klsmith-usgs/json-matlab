@@ -24,7 +24,7 @@ def retry(func, retries=5):
     @wraps(func)
     def wrapped(*args, **kwargs):
         count = 0
-        while True and count < retries:
+        while count < retries:
             try:
                 return func(*args, **kwargs)
             except Exception:

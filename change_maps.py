@@ -38,6 +38,16 @@ QUERY_DATES = tuple(dt.date(year=i, month=7, day=1).toordinal()
 
 
 def map_template():
+    """
+    Return a new dictionary to store annual change map values
+
+    {'product name': {1984: np.array values shape=(5000,),
+                      1985: np.array values shape=(5000,),
+                      ...
+                      }
+     'next product': {years:
+                     }
+    """
     ret = {}
 
     for m in MAP_NAMES:
@@ -49,27 +59,34 @@ def map_template():
 
 
 def open_matlab(file):
+    """
+    Open a matlab formatted file and return the data structure contained
+    within
+    """
     return sio.loadmat(file, squeeze_me=True)
 
 
-def mat_to_changemodel(t_start, t_end, t_break, category, magnitudes):
+def mat_to_changemodel(t_start, t_end, t_break, category, magnitudes, change_prob):
     return change_products.ChangeModel(t_start - 366,
                                        t_end - 366,
                                        t_break - 366 if t_break > 366 else 0,
                                        category,
-                                       magnitudes)
+                                       magnitudes,
+                                       change_prob)
 
 
-def determine_coverage(line_num, positions):
+def determine_coverage(line_num, unique_pos):
     coverage = np.ones(shape=(5000,))
 
     rng_min = ((line_num - 1) * 5000) + 1
-    rng_max = (line_num + 4999) + 1
-    complete = set(range(rng_min, rng_max))
-    diff = sorted(complete.difference(positions))
+    rng_max = line_num * 5000
+    complete = np.arange(start=rng_min, stop=rng_max + 1)
 
-    diff = [d - 1 for d in diff]
-    coverage[diff] = 0
+    if not np.array_equal(complete, unique_pos):
+        diff = set(complete).difference(unique_pos)
+
+        for d in diff:
+            coverage[complete == d] = 0
 
     return coverage
 
@@ -81,7 +98,6 @@ def changemap_vals(input, query_dates=QUERY_DATES):
 
     line = int(os.path.split(input)[-1][13:-4])
 
-
     x_locs = np.unique(data['pos'])
     for x in x_locs:
         model_locs = np.where(data['pos'] == x)[0]
@@ -91,7 +107,8 @@ def changemap_vals(input, query_dates=QUERY_DATES):
                                      data['t_end'][i],
                                      data['t_break'][i],
                                      data['category'][i],
-                                     data['magnitude'][i])
+                                     data['magnitude'][i],
+                                     data['change_prob'][i])
                   for i in model_locs]
 
         changedates = [change_products.changedate_val(models, qd)

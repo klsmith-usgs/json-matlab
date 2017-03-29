@@ -5,7 +5,7 @@ import numpy as np
 
 
 ChangeModel = namedtuple('ChangeModel', ['start_day', 'end_day', 'break_day',
-                                         'qa', 'magnitudes'])
+                                         'qa', 'magnitudes', 'change_prob'])
 
 
 beginning_of_time = dt.date(year=1982, month=1, day=1)
@@ -78,7 +78,10 @@ def lastchange_val(models, ord_date):
 
     break_dates = []
     for m in models:
-        break_dates.append(dt.date.fromordinal(m.break_day))
+        if m.change_prob == 1:
+            break_dates.append(dt.date.fromordinal(m.break_day))
+        else:
+            break_dates.append(0)
 
     diff = [(query_date - d).days for d in break_dates]
 
