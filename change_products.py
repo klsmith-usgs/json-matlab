@@ -81,7 +81,7 @@ def lastchange_val(models, ord_date):
         if m.change_prob == 1:
             break_dates.append(dt.date.fromordinal(m.break_day))
         else:
-            break_dates.append(0)
+            break_dates.append(query_date)
 
     diff = [(query_date - d).days for d in break_dates]
 
