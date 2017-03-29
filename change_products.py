@@ -19,6 +19,9 @@ def changedate_val(models, ord_date):
 
     ret = 0
     for m in models:
+        if m.break_day <= 0:
+            continue
+
         break_date = dt.date.fromordinal(m.break_day)
 
         if query_date.year == break_date.year:
