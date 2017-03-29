@@ -12,6 +12,9 @@ beginning_of_time = dt.date(year=1982, month=1, day=1)
 
 
 def changedate_val(models, ord_date):
+    if ord_date <= 0:
+        return 0
+
     query_date = dt.date.fromordinal(ord_date)
 
     ret = 0
@@ -26,6 +29,9 @@ def changedate_val(models, ord_date):
 
 
 def changemag_val(models, ord_date):
+    if ord_date <= 0:
+        return 0
+
     query_date = dt.date.fromordinal(ord_date)
 
     ret = 0
@@ -40,6 +46,9 @@ def changemag_val(models, ord_date):
 
 
 def qa_val(models, ord_date):
+    if ord_date <= 0:
+        return 0
+
     query_date = dt.date.fromordinal(ord_date)
 
     ret = 0
@@ -55,6 +64,9 @@ def qa_val(models, ord_date):
 
 
 def seglength_val(models, ord_date, bot=beginning_of_time):
+    if ord_date <= 0:
+        return 0
+
     query_date = dt.date.fromordinal(ord_date)
 
     all_dates = [bot]
@@ -74,6 +86,9 @@ def seglength_val(models, ord_date, bot=beginning_of_time):
 
 
 def lastchange_val(models, ord_date):
+    if ord_date <= 0:
+        return 0
+
     query_date = dt.date.fromordinal(ord_date)
 
     break_dates = []

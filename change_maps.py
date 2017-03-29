@@ -69,7 +69,7 @@ def open_matlab(file):
 def mat_to_changemodel(t_start, t_end, t_break, category, magnitudes, change_prob):
     return change_products.ChangeModel(t_start - 366,
                                        t_end - 366,
-                                       t_break - 366 if t_break > 366 else 0,
+                                       t_break - 366,
                                        category,
                                        magnitudes,
                                        change_prob)
