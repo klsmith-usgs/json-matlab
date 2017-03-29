@@ -273,7 +273,7 @@ if __name__ == '__main__':
     else:
         indir = sys.argv[1]
         outdir = sys.argv[2]
-        cpu = sys.argv[3]
+        cpu = int(sys.argv[3])
         horiz = sys.argv[4]
         vert = sys.argv[5]
 
