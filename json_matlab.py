@@ -3,6 +3,7 @@ import os
 import multiprocessing as mp
 import time
 from functools import wraps
+from logger import log
 
 import scipy.io as sio
 import numpy as np
@@ -71,48 +72,81 @@ def build_spectral(model, band_names=BAND_NAMES):
 
 @retry
 def worker(args):
-    pid = mp.current_process().name
-    t = time.time()
-
     try:
         output_path, h, v, line = args
-        print '{}: working line: {}'.format(pid, line)
+        log.debug('Working on lines {} - {}'.format(line, line + 100))
         ext, affine = geo_utils.extent_from_hv(h, v)
 
         y = ext.y_max - line * 30
-        outfile = os.path.join(output_path, 'record_change{}.mat'.format(line + 1))
+
         records = []
+        for x in xrange(ext.x_min, ext.x_max, 3000):
+            result_chip = api.request_results(x, y)
 
-        sample = 5000 * line
-        for x in xrange(ext.x_min, ext.x_max, 30):
-            sample += 1
-            results = api.request_results(x, y)
-
-            if results is None:
+            if result_chip is None:
                 continue
 
-            for model in results['change_models']:
-                record = record_template()
-                coefs, rmse, mags = build_spectral(model)
+            records.append(chip_to_records(result_chip, ext.x_min, ext.y_max))
 
-                record['t_start'] = pyordinal_to_matordinal(model['start_day'])
-                record['t_end'] = pyordinal_to_matordinal(model['end_day'])
-                record['t_break'] = pyordinal_to_matordinal(model['break_day'])
-                record['coefs'] = coefs
-                record['rmse'] = rmse
-                record['pos'] = sample
-                record['change_prob'] = model['change_probability']
-                record['num_obs'] = model['observation_count']
-                record['category'] = model['curve_qa']
-                record['magnitude'] = mags
+        for chip in records:
+            output_lines(output_path, chip)
 
-                records.append(record)
+        log.debug('Writing lines {} - {}'.format(line, line + 100))
 
-        print '{}: writing line: {}, time: {}'.format(pid, line, time.time() - t)
-        save_record(outfile, np.concatenate(tuple(records)))
+    except Exception:
+        log.exception('EXCEPTION')
 
-    except Exception as e:
-        print '{}: hit exception: {}'.format(pid, e)
+
+def output_lines(output_path, records):
+    for row in records:
+        output_line(output_path, records[row], row)
+
+
+def output_line(output_path, records, row):
+    outfile = os.path.join(output_path, 'record_change{}.mat'.format(row))
+
+    save_record(outfile, np.concatenate(tuple(records)))
+
+
+def chip_to_records(chip, tile_ulx, tile_uly):
+    ret = {}
+
+    for result in chip:
+        # + 1 for Matlab
+        column = (tile_ulx + result['x']) / 30 + 1
+        row = (tile_uly - result['y']) / 30 + 1
+
+        records = result_to_records(result, column)
+
+        if row not in ret:
+            ret[row] = []
+
+        ret[row].append(records)
+
+    return ret
+
+
+def result_to_records(result, column):
+    records = []
+
+    for model in result['change_models']:
+        record = record_template()
+        coefs, rmse, mags = build_spectral(model)
+
+        record['t_start'] = pyordinal_to_matordinal(model['start_day'])
+        record['t_end'] = pyordinal_to_matordinal(model['end_day'])
+        record['t_break'] = pyordinal_to_matordinal(model['break_day'])
+        record['coefs'] = coefs
+        record['rmse'] = rmse
+        record['pos'] = column
+        record['change_prob'] = model['change_probability']
+        record['num_obs'] = model['observation_count']
+        record['category'] = model['curve_qa']
+        record['magnitude'] = mags
+
+        records.append(record)
+
+    return records
 
 
 def run(output_path, h, v, cpus, resume=True):
@@ -121,7 +155,7 @@ def run(output_path, h, v, cpus, resume=True):
 
     pool = mp.Pool(processes=cpus)
 
-    lines = [l for l in range(5000)]
+    lines = [l for l in range(0, 5000, 100)]
 
     if resume is True:
         for f in os.listdir(output_path):

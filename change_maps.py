@@ -4,7 +4,6 @@ Change Maps for CCDC visualizations
 
 import os
 import sys
-import logging
 import multiprocessing as mp
 import datetime as dt
 
@@ -14,14 +13,7 @@ import scipy.io as sio
 
 import geo_utils
 import change_products
-
-
-LOGGER = logging.getLogger()
-handler = logging.StreamHandler()
-formatter = logging.Formatter('%(asctime)s: %(message)s')
-handler.setFormatter(formatter)
-LOGGER.addHandler(handler)
-LOGGER.setLevel(logging.DEBUG)
+from logger import log
 
 
 __HOST__ = r'http://lcmap-test.cr.usgs.gov/changes/results'
@@ -211,16 +203,16 @@ def multi_output(output_dir, output_q, kill_count, h, v):
             count += 1
             continue
 
-        LOGGER.debug('Outputting line: {0}'.format(outdata['y_off']))
+        log.debug('Outputting line: {0}'.format(outdata['y_off']))
         output_line(outdata, coverage, output_dir, h, v)
 
 
-def multi_worker(input_q, output_q, name):
+def multi_worker(input_q, output_q):
     while True:
         try:
             infile = input_q.get()
 
-            LOGGER.debug('{} - received {}'.format(name, infile))
+            log.debug('received {}'.format(infile))
 
             if infile == 'kill':
                 output_q.put(('kill', ''))
@@ -231,17 +223,17 @@ def multi_worker(input_q, output_q, name):
             map_dict, coverage = changemap_vals(infile)
             map_dict['y_off'] = int(filename[13:-4]) - 1
 
-            LOGGER.debug('{} - finished {}'.format(name, infile))
+            log.debug('finished {}'.format(infile))
             output_q.put((map_dict, coverage))
         except Exception as e:
-            LOGGER.exception('{} - exception'.format(name))
+            log.exception('EXCEPTION')
             continue
 
 
 def single_run(input_dir, output_dir, h, v):
     for f in os.listdir(input_dir):
         change = changemap_vals(f)
-        LOGGER.debug('Outputting line: {0}'.format(change['y_off']))
+        log.debug('Outputting line: {0}'.format(change['y_off']))
         output_line(change, output_dir, h, v)
 
 
@@ -258,7 +250,9 @@ def multi_run(input_dir, output_dir, num_procs, h, v):
         input_q.put('kill')
 
     for _ in range(worker_count):
-        mp.Process(target=multi_worker, args=(input_q, output_q, _)).start()
+        mp.Process(target=multi_worker,
+                   args=(input_q, output_q),
+                   name='Process-{}'.format(_)).start()
 
     multi_output(output_dir, output_q, worker_count, h, v)
 

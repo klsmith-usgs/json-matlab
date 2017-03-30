@@ -26,6 +26,20 @@ def api_request(x, y, refresh=False):
     return resp.json()
 
 
+def fetch_results_tile(x, y):
+    url = ('http://lcmap-test.cr.usgs.gov/'
+           'changes/'
+           'results/'
+           '{algorithm}/'
+           'tile?x={x}&y={y}'
+           .format(x=x, y=y, algorithm=__ALGORITHM__))
+
+    resp = requests.get(url)
+
+    if resp.status_code == 200:
+        return resp.json()
+
+
 def queue_tile_processing(h, v, refresh=False):
     ext, _ = extent_from_hv(h, v)
     
