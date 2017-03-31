@@ -114,7 +114,7 @@ def chip_to_records(chip, tile_ulx, tile_uly):
 
     for result in chip:
         if 'result_ok' in result and result['result_ok'] is True:
-            result = json.loads(result['result'])
+            models = json.loads(result['result'])
         else:
             continue
 
@@ -122,7 +122,7 @@ def chip_to_records(chip, tile_ulx, tile_uly):
         column = (tile_ulx + int(result['x'])) / 30 + 1
         row = (tile_uly - int(result['y'])) / 30 + 1
 
-        records = result_to_records(result, column)
+        records = result_to_records(models, column)
 
         if row not in ret:
             ret[row] = []
@@ -132,10 +132,10 @@ def chip_to_records(chip, tile_ulx, tile_uly):
     return ret
 
 
-def result_to_records(result, column):
+def result_to_records(models, column):
     records = []
 
-    for model in result['change_models']:
+    for model in models['change_models']:
         record = record_template()
         coefs, rmse, mags = build_spectral(model)
 

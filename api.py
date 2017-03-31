@@ -26,15 +26,18 @@ def api_request(x, y, refresh=False):
     return resp.json()
 
 
-def fetch_results_tile(x, y):
+def fetch_results_tile(x, y, algorithm=__ALGORITHM__):
     url = ('http://lcmap-test.cr.usgs.gov/'
            'changes/'
            'results/'
            '{algorithm}/'
            'tile?x={x}&y={y}'
-           .format(x=x, y=y, algorithm=__ALGORITHM__))
+           .format(x=x, y=y, algorithm=algorithm))
 
-    resp = requests.get(url)
+    s = requests.Session()
+    s.mount('http://', HTTPAdapter(max_retries=retries))
+
+    resp = s.get(url)
 
     if resp.status_code == 200:
         return resp.json()
