@@ -2,8 +2,12 @@ import json
 import requests
 from requests.packages.urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
+import logging
 
 from geo_utils import extent_from_hv
+
+
+logging.getLogger("requests").setLevel(logging.WARNING)
 
 __HOST__ = r'http://lcmap-test.cr.usgs.gov/changes/results'
 __ALGORITHM__ = r'lcmap-pyccd:1.1.0'
