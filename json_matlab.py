@@ -137,10 +137,12 @@ def chip_to_records(chip, tile_ulx, tile_uly):
             continue
 
         # + 1 for Matlab
-        column = (tile_ulx + int(result['x'])) / 30 + 1
         row = (tile_uly - int(result['y'])) / 30 + 1
+        # column is expected to be a continuous value, as if the extent was
+        # a flattened array
+        pos = ((int(result['x'] - tile_ulx)) / 30 + 1) + (row - 1) * 5000
 
-        records = result_to_records(models, column)
+        records = result_to_records(models, pos)
 
         if row not in ret:
             ret[row] = []
@@ -150,7 +152,7 @@ def chip_to_records(chip, tile_ulx, tile_uly):
     return ret
 
 
-def result_to_records(models, column):
+def result_to_records(models, pos):
     records = []
 
     for model in models['change_models']:
@@ -162,7 +164,7 @@ def result_to_records(models, column):
         record['t_break'] = pyordinal_to_matordinal(model['break_day'])
         record['coefs'] = coefs
         record['rmse'] = rmse
-        record['pos'] = column
+        record['pos'] = pos
         record['change_prob'] = model['change_probability']
         record['num_obs'] = model['observation_count']
         record['category'] = model['curve_qa']
