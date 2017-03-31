@@ -75,27 +75,45 @@ def build_spectral(model, band_names=BAND_NAMES):
 def worker(args):
     try:
         output_path, h, v, line = args
-        log.debug('Working on lines {} - {}'.format(line, line + 100))
+        log.debug('Received lines beginning at {}'.format(line))
         ext, affine = geo_utils.extent_from_hv(h, v)
 
         y = ext.y_max - line * 30
 
         records = []
         for x in xrange(ext.x_min, ext.x_max, 3000):
-            result_chip = api.request_results(x, y)
+            log.debug('Requesting chip x: {} y: {}'.format(x, y))
+            result_chip = api.fetch_results_tile(x, y)
 
             if result_chip is None:
+                log.debug('Received no results for chip x: {} y: {}'
+                          .format(x, y))
                 continue
 
+            log.debug('Received {} results for chip x: {} y: {}'
+                      .format(len(result_chip), x, y))
+
             records.append(chip_to_records(result_chip, ext.x_min, ext.y_max))
+            log.debug('Record chip accumulation: {}'.format(len(records)))
 
-        for chip in records:
-            output_lines(output_path, chip)
-
-        log.debug('Writing lines {} - {}'.format(line, line + 100))
+        log.debug('Outputting lines starting from: {}'.format(line))
+        output_lines(output_path, compress_record_chips(records))
 
     except Exception:
         log.exception('EXCEPTION')
+
+
+def compress_record_chips(record_chips):
+    ret = {}
+
+    for chip in record_chips:
+        for row, val in chip.items():
+            if row in ret:
+                ret[row].extend(val)
+            else:
+                ret[row] = val
+
+    return ret
 
 
 def output_lines(output_path, records):
