@@ -4,6 +4,7 @@ import multiprocessing as mp
 import time
 from functools import wraps
 from logger import log
+import json
 
 import scipy.io as sio
 import numpy as np
@@ -112,9 +113,14 @@ def chip_to_records(chip, tile_ulx, tile_uly):
     ret = {}
 
     for result in chip:
+        if 'result_ok' in result and result['result_ok'] is True:
+            result = json.loads(result['result'])
+        else:
+            continue
+
         # + 1 for Matlab
-        column = (tile_ulx + result['x']) / 30 + 1
-        row = (tile_uly - result['y']) / 30 + 1
+        column = (tile_ulx + int(result['x'])) / 30 + 1
+        row = (tile_uly - int(result['y'])) / 30 + 1
 
         records = result_to_records(result, column)
 
