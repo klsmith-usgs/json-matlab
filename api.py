@@ -44,8 +44,8 @@ def queue_tile_processing(h, v, refresh=False):
     ext, _ = extent_from_hv(h, v)
     
     resps = []
-    for y in xrange(ext.y_max, ext.y_max - 5000 * 30, -3000):
-        for x in xrange(ext.x_min, ext.x_min + 5000 * 30, 3000):
+    for y in xrange(ext.y_max, ext.y_min, -3000):
+        for x in xrange(ext.x_min, ext.x_max, 3000):
             resps.append(api_request(x, y, refresh=refresh))
             
     return resps       
