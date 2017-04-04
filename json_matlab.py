@@ -186,7 +186,8 @@ def run(output_path, h, v, cpus, resume=True):
     if resume is True:
         for f in os.listdir(output_path):
             line = int(f[13:-4]) - 1
-            lines.remove(line)
+            if not line % 100:
+                lines.remove(line)
 
     pool.map(worker, ((output_path, h, v, l) for l in lines))
 
