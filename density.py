@@ -86,7 +86,7 @@ def run(indir, output_dir, h, v, cpus):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2 or len(sys.argv) > 5:
+    if len(sys.argv) < 2 or len(sys.argv) > 6:
         input_dir = raw_input('Input directory: ')
         output_dir = raw_input('Output directory: ')
         horiz = raw_input('ARD h: ')
