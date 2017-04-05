@@ -72,6 +72,9 @@ class AsyncResults(object):
         self.timeout = timeout
 
     def __iter__(self):
+        return self
+
+    def next(self):
         return self.it.get(timeout=self.timeout)
 
 
