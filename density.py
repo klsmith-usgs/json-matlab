@@ -2,7 +2,6 @@ import os
 import sys
 import multiprocessing as mp
 
-from osgeo import gdal
 import numpy as np
 
 import change_maps as cm
@@ -75,7 +74,7 @@ class AsyncResults(object):
         return self
 
     def next(self):
-        return self.it.get(timeout=self.timeout)
+        return self.it.get()
 
 
 def run(indir, output_dir, h, v, cpus):
