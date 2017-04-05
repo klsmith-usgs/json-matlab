@@ -66,6 +66,15 @@ def reduce_results(accum, inarr):
     return accum
 
 
+class AsyncResults(object):
+    def __init__(self, async_res, timeout=5):
+        self.it = async_res
+        self.timeout = timeout
+
+    def __iter__(self):
+        return self.it.get(timeout=self.timeout)
+
+
 def run(indir, output_dir, h, v, cpus):
 
     log.debug('Queueing files')
@@ -74,9 +83,11 @@ def run(indir, output_dir, h, v, cpus):
     log.debug('Number of files queued: {}'.format(len(queue)))
 
     pool = mp.Pool(processes=cpus)
-    res_it = pool.map_async(worker, (q for q in queue))
+    async_res = pool.map_async(worker, (queue[q] for q in queue))
 
-    reduced = reduce(reduce_results, res_it)
+    results = AsyncResults(async_res)
+
+    reduced = reduce(reduce_results, results)
 
     log.debug('Outputting map')
     density_map(reduced, output_dir, h, v)
