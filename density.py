@@ -71,17 +71,22 @@ def reduce_results(results):
 def run(indir, output_dir, h, v, cpus):
     queue = []
 
+    log.debug('Queueing files')
     for root, dirs, files in os.walk(indir):
         for f in files:
             if f[-8:] == 'MTLstack':
                 queue.append(os.path.join(root, f))
 
+    log.debug('Number of files queued: {}'.format(len(queue)))
+
     pool = mp.Pool(processes=cpus)
 
-    res = pool.map(worker, queue)
+    res = pool.map(worker, (q for q in queue))
 
+    log.debug('Combining results')
     reduced = reduce_results(res)
 
+    log.debug('Outputting map')
     density_map(reduced, output_dir, h, v)
 
 
