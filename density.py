@@ -10,18 +10,18 @@ from logger import log
 import geo_utils
 
 
-def worker(file):
-    log.debug('Reading file {}'.format(file))
+def worker(files):
+    log.debug('Reading file {}'.format(files))
 
     ret = np.zeros(shape=(5000, 5000), dtype=bool)
-    ds = geo_utils.get_raster_ds(file)
-    band = ds.GetRasterBand(8)
-    arr = band.ReadAsArray()
+    for f in files:
+        ds = geo_utils.get_raster_ds(f)
+        band = ds.GetRasterBand(8)
+        arr = band.ReadAsArray()
 
-    ret[(arr == 0) | (arr == 1)] = 1
-    date = date_from_filename(os.path.split(file)[-1])
+        ret[(arr == 0) | (arr == 1)] = 1
 
-    return date, ret
+    return ret
 
 
 def date_from_filename(filename):
@@ -44,47 +44,39 @@ def density_map(array, outdir, h, v):
     ds = None
 
 
-def reduce_results(results):
-    ret = np.zeros(shape=(5000, 5000), dtype=int)
+def input_queue(indir):
+    fqueue = {}
 
-    dates, arrs = zip(*results)
-
-    dates = np.array(dates)
-    arrs = np.array(arrs, dtype=bool)
-
-    uniq, counts = np.unique(dates, return_counts=True)
-
-    for val in uniq:
-        if len(dates[dates == val]) > 1:
-            blah = np.zeros(shape=(5000, 5000), dtype=bool)
-
-            for i in np.where(dates == val)[0]:
-                blah[arrs[i]] = 1
-
-            ret += blah
-        else:
-            ret += arrs[dates == val]
-
-    return ret
-
-
-def run(indir, output_dir, h, v, cpus):
-    queue = []
-
-    log.debug('Queueing files')
     for root, dirs, files in os.walk(indir):
         for f in files:
             if f[-8:] == 'MTLstack':
-                queue.append(os.path.join(root, f))
+                jdate = date_from_filename(f)
+
+                if jdate not in fqueue:
+                    fqueue[jdate] = tuple()
+
+                fqueue[jdate] += (os.path.join(root, f),)
+
+    return fqueue
+
+
+def reduce_results(accum, inarr):
+    accum = accum + inarr
+
+    return accum
+
+
+def run(indir, output_dir, h, v, cpus):
+
+    log.debug('Queueing files')
+    queue = input_queue(indir)
 
     log.debug('Number of files queued: {}'.format(len(queue)))
 
     pool = mp.Pool(processes=cpus)
+    res_it = pool.map_async(worker, (q for q in queue))
 
-    res = pool.map(worker, (q for q in queue))
-
-    log.debug('Combining results')
-    reduced = reduce_results(res)
+    reduced = reduce(reduce_results, res_it)
 
     log.debug('Outputting map')
     density_map(reduced, output_dir, h, v)
