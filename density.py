@@ -67,7 +67,7 @@ def reduce_results(accum, inarr):
 
 
 class AsyncResults(object):
-    def __init__(self, async_res, timeout=5):
+    def __init__(self, async_res, timeout=20):
         self.it = async_res
         self.timeout = timeout
 
