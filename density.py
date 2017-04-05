@@ -12,30 +12,60 @@ import geo_utils
 
 def worker(file):
     log.debug('Reading file {}'.format(file))
+
     ret = np.zeros(shape=(5000, 5000), dtype=bool)
     ds = geo_utils.get_raster_ds(file)
     band = ds.GetRasterBand(8)
     arr = band.ReadAsArray()
 
     ret[(arr == 0) | (arr == 1)] = 1
+    date = date_from_filename(os.path.split(file)[-1])
 
-    return ret
+    return date, ret
 
 
-def density_map(arrays, outdir, h, v):
+def date_from_filename(filename):
+    return int(filename[9:16])
+
+
+def density_map(array, outdir, h, v):
     log.debug('Outputting density map')
     outfile = os.path.join(outdir, 'density.tif')
-    out_arr = np.zeros(shape=(5000, 5000), dtype=np.int)
-
-    for arr in arrays:
-        out_arr += arr
+    # out_arr = np.zeros(shape=(5000, 5000), dtype=np.int)
+    #
+    # for arr in arrays:
+    #     out_arr += arr
 
     ds = cm.create_geotif(outfile, 'ChangeMap', h, v)
     band = ds.GetRasterBand(1)
-    band.WriteArray(out_arr)
+    band.WriteArray(array)
 
     band = None
     ds = None
+
+
+def reduce_results(results):
+    ret = np.zeros(shape=(5000, 5000), dtype=int)
+
+    dates, arrs = zip(*results)
+
+    dates = np.array(dates)
+    arrs = np.array(arrs, dtype=bool)
+
+    uniq, counts = np.unique(dates, return_counts=True)
+
+    for val in uniq:
+        if len(dates[dates == val]) > 1:
+            blah = np.zeros(shape=(5000, 5000), dtype=bool)
+
+            for i in np.where(dates == val)[0]:
+                blah[arrs[i]] = 1
+
+            ret += blah
+        else:
+            ret += arrs[dates == val]
+
+    return ret
 
 
 def run(indir, output_dir, h, v, cpus):
@@ -50,7 +80,9 @@ def run(indir, output_dir, h, v, cpus):
 
     res = pool.map(worker, queue)
 
-    density_map(res, output_dir, h, v)
+    reduced = reduce_results(res)
+
+    density_map(reduced, output_dir, h, v)
 
 
 if __name__ == '__main__':
