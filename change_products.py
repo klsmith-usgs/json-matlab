@@ -55,14 +55,10 @@ def qa_val(models, ord_date):
     if ord_date <= 0:
         return 0
 
-    query_date = dt.date.fromordinal(ord_date)
-
     ret = 0
     for m in models:
-        start_date = dt.date.fromordinal(m.start_day)
-        end_date = dt.date.fromordinal(m.end_day)
 
-        if start_date < query_date < end_date:
+        if m.start_day <= ord_date <= m.end_day:
             ret = m.qa
             break
 
@@ -73,40 +69,33 @@ def seglength_val(models, ord_date, bot=beginning_of_time):
     if ord_date <= 0:
         return 0
 
-    query_date = dt.date.fromordinal(ord_date)
-
     all_dates = [bot]
     for m in models:
-        start_date = dt.date.fromordinal(m.start_day)
-        end_date = dt.date.fromordinal(m.end_day)
+        all_dates.append(m.start_day)
+        all_dates.append(m.end_day)
 
-        all_dates.append(start_date)
-        all_dates.append(end_date)
+    diff = [(ord_date - d) for d in all_dates if (ord_date - d) > 0]
 
-    diff = [(query_date - d).days for d in all_dates]
-
-    if not any((i > 0 for i in diff)):
+    if not diff:
         return 0
 
-    return min(i for i in diff if i > 0)
+    return min(diff)
 
 
 def lastchange_val(models, ord_date):
     if ord_date <= 0:
         return 0
 
-    query_date = dt.date.fromordinal(ord_date)
-
     break_dates = []
     for m in models:
         if m.change_prob == 1:
-            break_dates.append(dt.date.fromordinal(m.break_day))
+            break_dates.append(m.break_day)
         else:
-            break_dates.append(query_date)
+            break_dates.append(ord_date)
 
-    diff = [(query_date - d).days for d in break_dates]
+    diff = [(ord_date - d) for d in break_dates if (ord_date - d) > 0]
 
-    if not any((i > 0 for i in diff)):
+    if not diff:
         return 0
 
-    return min(i for i in diff if i > 0)
+    return min(diff)
