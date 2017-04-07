@@ -24,7 +24,7 @@ CONUS_ALBERS.ImportFromEPSG(5070)
 CONUS_WKT = CONUS_ALBERS.ExportToWkt()
 
 MAP_NAMES = ('ChangeMap', 'ChangeMagMap', 'QAMap', 'SegLength', 'LastChange')
-YEARS = tuple(i for i in range(1984, 2017))
+YEARS = tuple(i for i in range(1984, 2016))
 QUERY_DATES = tuple(dt.date(year=i, month=7, day=1).toordinal()
                     for i in YEARS)
 

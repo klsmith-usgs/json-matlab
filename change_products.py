@@ -8,7 +8,7 @@ ChangeModel = namedtuple('ChangeModel', ['start_day', 'end_day', 'break_day',
                                          'qa', 'magnitudes', 'change_prob'])
 
 
-beginning_of_time = dt.date(year=1982, month=1, day=1)
+beginning_of_time = dt.date(year=1982, month=1, day=1).toordinal()
 
 
 def changedate_val(models, ord_date):
