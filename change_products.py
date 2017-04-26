@@ -90,8 +90,6 @@ def lastchange_val(models, ord_date):
     for m in models:
         if m.change_prob == 1:
             break_dates.append(m.break_day)
-        else:
-            break_dates.append(ord_date)
 
     diff = [(ord_date - d) for d in break_dates if (ord_date - d) > 0]
 
