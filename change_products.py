@@ -24,7 +24,7 @@ def changedate_val(models, ord_date):
 
         break_date = dt.date.fromordinal(m.break_day)
 
-        if query_date.year == break_date.year:
+        if query_date.year == break_date.year and m.change_prob == 1:
             ret = break_date.timetuple().tm_yday
             break
 
@@ -44,7 +44,7 @@ def changemag_val(models, ord_date):
 
         break_date = dt.date.fromordinal(m.break_day)
 
-        if query_date.year == break_date.year:
+        if query_date.year == break_date.year and m.change_prob == 1:
             ret = np.linalg.norm(m.magnitudes[1:-1])
             break
 
