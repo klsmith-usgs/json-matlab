@@ -1,8 +1,7 @@
 import json
 import requests
-from requests.packages.urllib3.util.retry import Retry
-from requests.adapters import HTTPAdapter
 import logging
+import commons
 
 from geo_utils import extent_from_hv
 
@@ -10,38 +9,29 @@ from geo_utils import extent_from_hv
 logging.getLogger("requests").setLevel(logging.WARNING)
 
 __HOST__ = r'http://lcmap-test.cr.usgs.gov/changes/results'
-__ALGORITHM__ = r'lcmap-pyccd:1.1.0'
+__ALGORITHM__ = r'lcmap-pyccd:1.4.0'
 
 
-retries = Retry(total=10,
-                backoff_factor=0.5,
-                status_forcelist=[500, 502, 503, 504])
-
-
-def api_request(x, y, refresh=False):
-    s = requests.Session()
-    s.mount('http://', HTTPAdapter(max_retries=retries))
-
+@commons.retry(10)
+def fetch_results_pixel(x, y, refresh=False):
     endpoint = '/'.join([__HOST__, __ALGORITHM__, str(x), str(y)]) +\
                '?refresh={}'.format(str(refresh).lower())
 
-    resp = s.get(endpoint)
+    resp = requests.get(endpoint)
     
     return resp.json()
 
 
-def fetch_results_tile(x, y, algorithm=__ALGORITHM__):
+@commons.retry(10)
+def fetch_results_chip(x, y, algorithm=__ALGORITHM__):
     url = ('http://lcmap-test.cr.usgs.gov/'
            'changes/'
            'results/'
            '{algorithm}/'
-           'tile?x={x}&y={y}'
+           'chip?x={x}&y={y}'
            .format(x=x, y=y, algorithm=algorithm))
 
-    s = requests.Session()
-    s.mount('http://', HTTPAdapter(max_retries=retries))
-
-    resp = s.get(url)
+    resp = requests.get(url)
 
     if resp.status_code == 200:
         return resp.json()
@@ -53,15 +43,15 @@ def queue_tile_processing(h, v, refresh=False):
     resps = []
     for y in xrange(ext.y_max, ext.y_min, -3000):
         for x in xrange(ext.x_min, ext.x_max, 3000):
-            resps.append(api_request(x, y, refresh=refresh))
+            resps.append(fetch_results_pixel(x, y, refresh=refresh))
             
     return resps       
      
 
 def request_results(x, y):
-    resp = api_request(x, y)
+    resp = fetch_results_pixel(x, y)
     
-    if 'result_ok' in resp and resp['result_ok'] is True:
+    if resp.get('result_ok'):
         return json.loads(resp['result'])
 
     else:

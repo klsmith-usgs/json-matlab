@@ -1,8 +1,6 @@
 import sys
 import os
 import multiprocessing as mp
-import time
-from functools import wraps
 from logger import log
 import json
 
@@ -11,6 +9,7 @@ import numpy as np
 
 import geo_utils
 import api
+import commons
 
 
 BAND_NAMES = ('blue',
@@ -20,18 +19,6 @@ BAND_NAMES = ('blue',
               'swir1',
               'swir2',
               'thermal')
-
-
-def retry(func, retries=5):
-    @wraps(func)
-    def wrapped(*args, **kwargs):
-        count = 0
-        while count < retries:
-            try:
-                return func(*args, **kwargs)
-            except Exception:
-                count += 1
-    return wrapped
 
 
 def record_template():
@@ -71,36 +58,32 @@ def build_spectral(model, band_names=BAND_NAMES):
     return coefs, rmse, magnitude
 
 
-@retry
+@commons.retry(5)
 def worker(args):
-    try:
-        output_path, h, v, line = args
-        log.debug('Received lines beginning at {}'.format(line))
-        ext, affine = geo_utils.extent_from_hv(h, v)
+    output_path, h, v, line = args
+    log.debug('Received lines beginning at {}'.format(line))
+    ext, affine = geo_utils.extent_from_hv(h, v)
 
-        y = ext.y_max - line * 30
+    y = ext.y_max - line * 30
 
-        records = []
-        for x in xrange(ext.x_min, ext.x_max, 3000):
-            log.debug('Requesting chip x: {} y: {}'.format(x, y))
-            result_chip = api.fetch_results_tile(x, y)
+    records = []
+    for x in xrange(ext.x_min, ext.x_max, 3000):
+        log.debug('Requesting chip x: {} y: {}'.format(x, y))
+        result_chip = api.fetch_results_chip(x, y)
 
-            if result_chip is None:
-                log.debug('Received no results for chip x: {} y: {}'
-                          .format(x, y))
-                continue
+        if result_chip is None:
+            log.debug('Received no results for chip x: {} y: {}'
+                      .format(x, y))
+            continue
 
-            log.debug('Received {} results for chip x: {} y: {}'
-                      .format(len(result_chip), x, y))
+        log.debug('Received {} results for chip x: {} y: {}'
+                  .format(len(result_chip), x, y))
 
-            records.append(chip_to_records(result_chip, ext.x_min, ext.y_max))
-            log.debug('Record chip accumulation: {}'.format(len(records)))
+        records.append(chip_to_records(result_chip, ext.x_min, ext.y_max))
+        log.debug('Record chip accumulation: {}'.format(len(records)))
 
-        log.debug('Outputting lines starting from: {}'.format(line))
-        output_lines(output_path, compress_record_chips(records))
-
-    except Exception:
-        log.exception('EXCEPTION')
+    log.debug('Outputting lines starting from: {}'.format(line))
+    output_lines(output_path, compress_record_chips(records))
 
 
 def compress_record_chips(record_chips):
@@ -131,7 +114,7 @@ def chip_to_records(chip, tile_ulx, tile_uly):
     ret = {}
 
     for result in chip:
-        if 'result_ok' in result and result['result_ok'] is True:
+        if result.get('result_ok') is True:
             models = json.loads(result['result'])
         else:
             continue
