@@ -231,10 +231,15 @@ def multi_worker(input_q, output_q):
 
 
 def single_run(input_dir, output_dir, h, v):
-    for f in os.listdir(input_dir):
-        change = changemap_vals(f)
-        log.debug('Outputting line: {0}'.format(change['y_off']))
-        output_line(change, output_dir, h, v)
+    for infile in os.listdir(input_dir):
+        log.debug('received {}'.format(infile))
+        filename = os.path.split(infile)[-1]
+
+        map_dict, coverage = changemap_vals(infile)
+        map_dict['y_off'] = int(filename[13:-4]) - 1
+
+        log.debug('Outputting line: {0}'.format(map_dict['y_off']))
+        output_line(map_dict, coverage, output_dir, h, v)
 
 
 def multi_run(input_dir, output_dir, num_procs, h, v):
@@ -255,23 +260,23 @@ def multi_run(input_dir, output_dir, num_procs, h, v):
                    name='Process-{}'.format(_)).start()
 
     multi_output(output_dir, output_q, worker_count, h, v)
-
-
-if __name__ == '__main__':
-    if len(sys.argv) < 6:
-        indir = raw_input('Input directory: ')
-        outdir = raw_input('Output directory: ')
-        cpu = raw_input('Number of CPU\'s: ')
-        horiz = raw_input('H: ')
-        vert = raw_input('V: ')
-    else:
-        indir = sys.argv[1]
-        outdir = sys.argv[2]
-        cpu = int(sys.argv[3])
-        horiz = sys.argv[4]
-        vert = sys.argv[5]
-
-    if cpu < 2:
-        single_run(indir, outdir, horiz, vert)
-    else:
-        multi_run(indir, outdir, int(cpu), int(horiz), int(vert))
+#
+#
+# if __name__ == '__main__':
+#     if len(sys.argv) < 6:
+#         indir = raw_input('Input directory: ')
+#         outdir = raw_input('Output directory: ')
+#         cpu = raw_input('Number of CPU\'s: ')
+#         horiz = raw_input('H: ')
+#         vert = raw_input('V: ')
+#     else:
+#         indir = sys.argv[1]
+#         outdir = sys.argv[2]
+#         cpu = int(sys.argv[3])
+#         horiz = sys.argv[4]
+#         vert = sys.argv[5]
+#
+#     if cpu < 2:
+#         single_run(indir, outdir, horiz, vert)
+#     else:
+#         multi_run(indir, outdir, int(cpu), int(horiz), int(vert))

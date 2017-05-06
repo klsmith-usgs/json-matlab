@@ -1,4 +1,3 @@
-import sys
 import os
 import multiprocessing as mp
 from logger import log
@@ -9,7 +8,6 @@ import numpy as np
 
 import geo_utils
 import api
-import commons
 
 
 BAND_NAMES = ('blue',
@@ -58,9 +56,8 @@ def build_spectral(model, band_names=BAND_NAMES):
     return coefs, rmse, magnitude
 
 
-@commons.retry(5)
 def worker(args):
-    output_path, h, v, line = args
+    output_path, input_path, h, v, line = args
     log.debug('Received lines beginning at {}'.format(line))
     ext, affine = geo_utils.extent_from_hv(h, v)
 
@@ -69,7 +66,12 @@ def worker(args):
     records = []
     for x in xrange(ext.x_min, ext.x_max, 3000):
         log.debug('Requesting chip x: {} y: {}'.format(x, y))
-        result_chip = api.fetch_results_chip(x, y)
+
+        # Temporary work around to get things going
+        if input_path:
+            result_chip = fetch_file_results(input_path, h, v, x, y)
+        else:
+            result_chip = api.fetch_results_chip(x, y)
 
         if result_chip is None:
             log.debug('Received no results for chip x: {} y: {}'
@@ -84,6 +86,14 @@ def worker(args):
 
     log.debug('Outputting lines starting from: {}'.format(line))
     output_lines(output_path, compress_record_chips(records))
+
+
+def fetch_file_results(dir, h, v, x, y):
+    filename = 'H{:02d}V{:02d}_{}_{}.json'.format(h, v, x, y)
+    filepath = os.path.join(dir, filename)
+
+    with open(filepath, 'r') as f:
+        return json.load(f)
 
 
 def compress_record_chips(record_chips):
@@ -158,7 +168,7 @@ def result_to_records(models, pos):
     return records
 
 
-def run(output_path, h, v, cpus, resume=True):
+def run(output_path, h, v, cpus, input_path, resume=True):
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
@@ -172,19 +182,20 @@ def run(output_path, h, v, cpus, resume=True):
             if not line % 100:
                 lines.remove(line)
 
-    pool.map(worker, ((output_path, h, v, l) for l in lines))
-
-
-if __name__ == '__main__':
-    if len(sys.argv) < 2 or len(sys.argv) > 5:
-        output_dir = raw_input('Output directory: ')
-        horiz = raw_input('ARD h: ')
-        vert = raw_input('ARD v: ')
-        cpu_count = raw_input('Number of CPU: ')
-    else:
-        output_dir = sys.argv[1]
-        horiz = int(sys.argv[2])
-        vert = int(sys.argv[3])
-        cpu_count = int(sys.argv[4])
-
-    run(output_dir, horiz, vert, cpu_count)
+    pool.map(worker, ((output_path, input_path, h, v, l) for l in lines))
+#
+#
+# if __name__ == '__main__':
+#     if len(sys.argv) < 2 or len(sys.argv) > 5:
+#         output_dir = raw_input('Output directory: ')
+#         input_dir = raw_input('Output directory: ')
+#         horiz = raw_input('ARD h: ')
+#         vert = raw_input('ARD v: ')
+#         cpu_count = raw_input('Number of CPU: ')
+#     else:
+#         output_dir = sys.argv[1]
+#         horiz = int(sys.argv[2])
+#         vert = int(sys.argv[3])
+#         cpu_count = int(sys.argv[4])
+#
+#     run(output_dir, horiz, vert, cpu_count)
