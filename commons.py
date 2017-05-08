@@ -10,7 +10,6 @@ def retry(retries):
                 try:
                     return func(*args, **kwargs)
                 except:
-                    log.exception('EXCEPTION')
                     count += 1
 
                     if count > retries:

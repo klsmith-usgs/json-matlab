@@ -9,7 +9,7 @@ from geo_utils import extent_from_hv
 logging.getLogger("requests").setLevel(logging.WARNING)
 
 __HOST__ = r'http://lcmap-test.cr.usgs.gov/changes/results'
-__ALGORITHM__ = r'lcmap-pyccd:1.4.0'
+__ALGORITHM__ = r'lcmap-pyccd:1.4.0rc1'
 
 
 @commons.retry(10)

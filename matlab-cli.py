@@ -13,6 +13,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument('output', help='Output location to for the Matlab files.')
 parser.add_argument('h', help='ARD Grid h value.', type=int)
 parser.add_argument('v', help='ARD Grid v value.', type=int)
+parser.add_argument('algorithm', help='Algorithm version to request')
 parser.add_argument('-i', '--input',
                     help='Directory location of JSON files to read.',
                     default=None,
@@ -23,5 +24,5 @@ parser.add_argument('-p', '--proc',
 
 args = parser.parse_args()
 
-jm.run(args.output, args.h, args.v, args.proc, args.input)
+jm.run(args.output, args.h, args.v, args.algorithm, args.proc, args.input)
 # run(output_dir, horiz, vert, cpu_count)

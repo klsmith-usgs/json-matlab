@@ -57,7 +57,7 @@ def build_spectral(model, band_names=BAND_NAMES):
 
 
 def worker(args):
-    output_path, input_path, h, v, line = args
+    output_path, input_path, h, v, alg, line = args
     log.debug('Received lines beginning at {}'.format(line))
     ext, affine = geo_utils.extent_from_hv(h, v)
 
@@ -67,11 +67,15 @@ def worker(args):
     for x in xrange(ext.x_min, ext.x_max, 3000):
         log.debug('Requesting chip x: {} y: {}'.format(x, y))
 
-        # Temporary work around to get things going
-        if input_path:
-            result_chip = fetch_file_results(input_path, h, v, x, y)
-        else:
-            result_chip = api.fetch_results_chip(x, y)
+        try:
+            # Temporary work around to get things going
+            if input_path:
+                result_chip = fetch_file_results(input_path, h, v, x, y)
+            else:
+                result_chip = api.fetch_results_chip(x, y, alg)
+        except:
+            log.exception('EXCEPTION')
+            continue
 
         if result_chip is None:
             log.debug('Received no results for chip x: {} y: {}'
@@ -168,7 +172,7 @@ def result_to_records(models, pos):
     return records
 
 
-def run(output_path, h, v, cpus, input_path, resume=True):
+def run(output_path, h, v, alg, cpus, input_path, resume=True):
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
@@ -182,7 +186,7 @@ def run(output_path, h, v, cpus, input_path, resume=True):
             if not line % 100:
                 lines.remove(line)
 
-    pool.map(worker, ((output_path, input_path, h, v, l) for l in lines))
+    pool.map(worker, ((output_path, input_path, h, v, alg, l) for l in lines))
 #
 #
 # if __name__ == '__main__':
