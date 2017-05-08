@@ -118,10 +118,10 @@ def compress_record_chips(record_chips):
 
     for chip in record_chips:
         for row, val in chip.items():
-            if row in ret:
-                ret[row] += val
-            else:
-                ret[row] = val
+            if row not in ret:
+                ret[row] = tuple()
+
+            ret[row] += val
 
     return ret
 
@@ -163,7 +163,7 @@ def chip_to_records(chip, tile_ulx, tile_uly):
         if row not in ret:
             ret[row] = tuple()
 
-        ret[row] += (records,)
+        ret[row] += records
 
     return ret
 
