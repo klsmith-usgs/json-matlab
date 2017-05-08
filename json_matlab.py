@@ -37,7 +37,7 @@ def pyordinal_to_matordinal(ord_date):
 
 
 def save_record(outfile, record):
-    sio.savemat(outfile, {'rec_cg': record})
+    sio.savemat(outfile, {'rec_cg': record}, do_compression=True)
 
 
 def build_spectral(model, band_names=BAND_NAMES):
@@ -63,21 +63,17 @@ def worker(args):
 
     y = ext.y_max - line * 30
 
-    records = []
+    records = tuple()
     for x in xrange(ext.x_min, ext.x_max, 3000):
         log.debug('Requesting chip x: {} y: {}'.format(x, y))
 
         try:
-            # Temporary work around to get things going
-            if input_path:
-                result_chip = fetch_file_results(input_path, h, v, x, y)
-            else:
-                result_chip = api.fetch_results_chip(x, y, alg)
+            result_chip = get_data(input_path, h, v, x, y, alg)
         except:
             log.exception('EXCEPTION')
             continue
 
-        if result_chip is None:
+        if result_chip is None or len(result_chip) == 0:
             log.debug('Received no results for chip x: {} y: {}'
                       .format(x, y))
             continue
@@ -85,14 +81,28 @@ def worker(args):
         log.debug('Received {} results for chip x: {} y: {}'
                   .format(len(result_chip), x, y))
 
-        records.append(chip_to_records(result_chip, ext.x_min, ext.y_max))
+        records += (chip_to_records(result_chip, ext.x_min, ext.y_max),)
         log.debug('Record chip accumulation: {}'.format(len(records)))
 
     log.debug('Outputting lines starting from: {}'.format(line))
     output_lines(output_path, compress_record_chips(records))
 
 
+def get_data(input_path, h, v, x, y, alg):
+    """
+    Return chip results from either the api, or from files. Depends on whether
+    input_path is not None.
+    """
+    if input_path:
+        return fetch_file_results(input_path, h, v, x, y)
+    else:
+        return api.fetch_results_chip(x, y, alg)
+
+
 def fetch_file_results(dir, h, v, x, y):
+    """
+    Create a dictionary from a JSON file matching a certain naming convention. 
+    """
     filename = 'H{:02d}V{:02d}_{}_{}.json'.format(h, v, x, y)
     filepath = os.path.join(dir, filename)
 
@@ -121,10 +131,16 @@ def output_lines(output_path, records):
 def output_line(output_path, records, row):
     outfile = os.path.join(output_path, 'record_change{}.mat'.format(row))
 
-    save_record(outfile, np.concatenate(tuple(records)))
+    save_record(outfile, np.concatenate(records))
 
 
 def chip_to_records(chip, tile_ulx, tile_uly):
+    """
+    Move through the LCMAP results chip and change to a dictionary of tuples
+    containing numpy structures.
+    
+    Returns dictionary keyed row.
+    """
     ret = {}
 
     for result in chip:
@@ -142,15 +158,15 @@ def chip_to_records(chip, tile_ulx, tile_uly):
         records = result_to_records(models, pos)
 
         if row not in ret:
-            ret[row] = []
+            ret[row] = tuple()
 
-        ret[row].append(records)
+        ret[row] += (records,)
 
     return ret
 
 
 def result_to_records(models, pos):
-    records = []
+    records = tuple()
 
     for model in models['change_models']:
         record = record_template()
@@ -167,7 +183,7 @@ def result_to_records(models, pos):
         record['category'] = model['curve_qa']
         record['magnitude'] = mags
 
-        records.append(record)
+        records += (record,)
 
     return records
 
@@ -180,11 +196,13 @@ def run(output_path, h, v, alg, cpus, input_path, resume=True):
 
     lines = [l for l in range(0, 5000, 100)]
 
+    # Disabled for now
     if resume is True:
-        for f in os.listdir(output_path):
-            line = int(f[13:-4]) - 1
-            if not line % 100:
-                lines.remove(line)
+        pass
+        # for f in os.listdir(output_path):
+        #     line = int(f[13:-4]) - 1
+        #     if not line % 100:
+        #         lines.remove(line)
 
     pool.map(worker, ((output_path, input_path, h, v, alg, l) for l in lines))
 #
