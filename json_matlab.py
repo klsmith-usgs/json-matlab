@@ -87,6 +87,8 @@ def worker(args):
     log.debug('Outputting lines starting from: {}'.format(line))
     output_lines(output_path, compress_record_chips(records))
 
+    return True
+
 
 def get_data(input_path, h, v, x, y, alg):
     """
@@ -204,7 +206,10 @@ def run(output_path, h, v, alg, cpus, input_path, resume=True):
         #     if not line % 100:
         #         lines.remove(line)
 
-    pool.map(worker, ((output_path, input_path, h, v, alg, l) for l in lines))
+    ret = pool.map(worker, ((output_path, input_path, h, v, alg, l)
+                            for l in lines))
+
+    log.debug('Successful workers: {}'.format(np.sum(ret)))
 #
 #
 # if __name__ == '__main__':
