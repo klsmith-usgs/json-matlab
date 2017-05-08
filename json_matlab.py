@@ -2,6 +2,7 @@ import os
 import multiprocessing as mp
 from logger import log
 import json
+from functools import partial
 
 import scipy.io as sio
 import numpy as np
@@ -56,8 +57,8 @@ def build_spectral(model, band_names=BAND_NAMES):
     return coefs, rmse, magnitude
 
 
-def worker(args):
-    output_path, input_path, h, v, alg, line = args
+def worker(output_path, input_path, h, v, alg, line):
+    # output_path, input_path, h, v, alg, line = args
     log.debug('Received lines beginning at {}'.format(line))
     ext, affine = geo_utils.extent_from_hv(h, v)
 
@@ -206,10 +207,11 @@ def run(output_path, h, v, alg, cpus, input_path, resume=True):
         #     if not line % 100:
         #         lines.remove(line)
 
-    ret = pool.map(worker, ((output_path, input_path, h, v, alg, l)
-                            for l in lines))
+    func = partial(worker, output_path, input_path, h, v, alg)
 
-    log.debug('Successful workers: {}'.format(np.sum(ret)))
+    success = pool.map(func, lines)
+
+    log.debug('Successful workers: {}'.format(np.sum(success)))
 #
 #
 # if __name__ == '__main__':
