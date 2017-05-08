@@ -119,7 +119,7 @@ def compress_record_chips(record_chips):
     for chip in record_chips:
         for row, val in chip.items():
             if row in ret:
-                ret[row].extend(val)
+                ret[row] += (val,)
             else:
                 ret[row] = val
 
