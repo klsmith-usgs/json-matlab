@@ -68,11 +68,7 @@ def worker(output_path, input_path, h, v, alg, line):
     for x in xrange(ext.x_min, ext.x_max, 3000):
         log.debug('Requesting chip x: {} y: {}'.format(x, y))
 
-        try:
-            result_chip = get_data(input_path, h, v, x, y, alg)
-        except:
-            log.exception('EXCEPTION')
-            continue
+        result_chip = get_data(input_path, h, v, x, y, alg)
 
         if result_chip is None or len(result_chip) == 0:
             log.debug('Received no results for chip x: {} y: {}'
@@ -96,10 +92,13 @@ def get_data(input_path, h, v, x, y, alg):
     Return chip results from either the api, or from files. Depends on whether
     input_path is not None.
     """
-    if input_path:
-        return fetch_file_results(input_path, h, v, x, y)
-    else:
-        return api.fetch_results_chip(x, y, alg)
+    try:
+        if input_path:
+            return fetch_file_results(input_path, h, v, x, y)
+        else:
+            return api.fetch_results_chip(x, y, alg)
+    except:
+        return None
 
 
 def fetch_file_results(dir, h, v, x, y):
