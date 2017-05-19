@@ -55,7 +55,7 @@ def write_json(data, output_path):
 
 if __name__ == '__main__':
     indir = sys.argv[1]
-    outdir = int(sys.argv[2])
+    outdir = sys.argv[2]
     cpu_count = int(sys.argv[3])
 
     run(indir, outdir, cpu_count)
