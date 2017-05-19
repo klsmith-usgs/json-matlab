@@ -19,7 +19,8 @@ def run(input_path, output_path, cpus):
     pool.map(worker, ((f, output_path) for f in files))
 
 
-def worker(file_path, output_path):
+def worker(args):
+    file_path, output_path = args
     result_chip = get_data(file_path)
     filename = os.path.split(file_path)[-1]
     log.debug('Working file: {}'.format(filename))
