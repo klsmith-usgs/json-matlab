@@ -53,9 +53,8 @@ def geo_to_rowcol(affine, coord):
     :param coord:
     :return:
     """
-    # floor and ceil probably depends on rotation, but use standard for N up
-    col = math.floor((coord.x - affine.ul_x - affine.ul_y * affine.rot_1) / affine.x_res)
-    row = math.ceil((coord.y - affine.ul_y - affine.ul_x * affine.rot_2) / affine.y_res)
+    col = (coord.x - affine.ul_x - affine.ul_y * affine.rot_1) / affine.x_res
+    row = (coord.y - affine.ul_y - affine.ul_x * affine.rot_2) / affine.y_res
 
     return RowColumn(row=int(row),
                      column=int(col))
