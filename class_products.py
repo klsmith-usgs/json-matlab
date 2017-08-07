@@ -55,18 +55,17 @@ def fromto(models, ord_date):
     if ord_date <= 0:
         return 0
 
+    query_yr = dt.date.fromordinal(ord_date).year
+
     prev_class = 0
-    prev_end = 0
     for m in models:
         class_val = m.class_vals[np.argmax(m.class_probs[0])]
+        yr = dt.date.fromordinal(m.start_day).year
 
-        if m.start_day <= ord_date <= m.end_day:
+        if yr == query_yr:
             return int('{}{}'.format(prev_class, class_val))
-        elif prev_end < ord_date < m.start_day:
-            return int('{}{}'.format(prev_class, trans_class))
 
         prev_class = class_val
-        prev_end = m.end_day
 
 
 def conf_primary(models, ord_date):

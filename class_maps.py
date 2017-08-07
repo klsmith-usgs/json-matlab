@@ -232,8 +232,8 @@ def multi_run(input_dir, output_dir, num_procs, h, v):
 
 
 def main():
-    indir = r'X:\klsmith\class'
-    outdir = r'C:\temp\class'
+    indir = r'C:\temp\class\results'
+    outdir = r'C:\temp\class\maps'
     procs = 4
     h = 5
     v = 2
