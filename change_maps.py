@@ -6,13 +6,14 @@ import os
 import sys
 import multiprocessing as mp
 import datetime as dt
+import json
 
 from osgeo import gdal, osr
 import numpy as np
 import scipy.io as sio
 
 import geo_utils
-import change_products
+import change_products as cp
 from logger import log
 
 
@@ -50,90 +51,106 @@ def map_template():
     return ret
 
 
-def open_matlab(file):
-    """
-    Open a matlab formatted file and return the data structure contained
-    within
-    """
-    return sio.loadmat(file, squeeze_me=True)
+def get_json(path):
+    if os.path.exists(path):
+        with open(path, 'r') as f:
+            return json.load(f)
+    else:
+        return None
 
 
-def mat_to_changemodel(t_start, t_end, t_break, category, magnitudes, change_prob):
-    return change_products.ChangeModel(t_start - 366,
-                                       t_end - 366,
-                                       t_break - 366,
-                                       category,
-                                       magnitudes,
-                                       change_prob)
+def load_jsondata(data):
+    outdata = np.full(fill_value=None, shape=(100, 100), dtype=object)
+
+    if data is not None:
+        for d in data:
+            result = d.get('result', 'null')
+
+            # Could leverage geo_utils to do this
+            col = int((d['x'] - d['chip_x']) / 30)
+            row = int((d['chip_y'] - d['y']) / 30)
+
+            outdata[row][col] = json.loads(result)
+
+    return outdata
 
 
-def determine_coverage(line_num, unique_pos):
-    coverage = np.ones(shape=(5000,))
+def determine_coverage(data):
+    coverage = np.ones(shape=(100, 100), dtype=np.int)
 
-    rng_min = ((line_num - 1) * 5000) + 1
-    rng_max = line_num * 5000
-    complete = np.arange(start=rng_min, stop=rng_max + 1)
-
-    if not np.array_equal(complete, unique_pos):
-        diff = set(complete).difference(unique_pos)
-
-        for d in diff:
-            coverage[complete == d] = 0
+    coverage[data.reshape(100, 100) == None] = 0
 
     return coverage
 
 
+def coords_frompath(file_path):
+    parts = os.path.split(file_path)[-1].split('_')
+    return parts[1], parts[2]
+
+
 def changemap_vals(input, query_dates=QUERY_DATES):
+    data = load_jsondata(get_json(input)).flatten()
+    chip_x, chip_y = coords_frompath(input)
+
     temp = map_template()
+    temp['chip_x'] = int(chip_x)
+    temp['chip_y'] = int(chip_y)
 
-    data = open_matlab(input)['rec_cg']
+    coverage = determine_coverage(data)
 
-    line = int(os.path.split(input)[-1][13:-4])
+    row = 0
+    col = 0
+    for result in data:
+        models = [cp.ChangeModel(r['start_day'], r['end_day'], r['break_day'],
+                                 r['qa'], r['magnitudes'], r['change_prob'])
+                  for r in result]
 
-    x_locs = np.unique(data['pos'])
-    for x in x_locs:
-        model_locs = np.where(data['pos'] == x)[0]
-        arr_pos = (x - 1) % 5000
-
-        models = [mat_to_changemodel(data['t_start'][i],
-                                     data['t_end'][i],
-                                     data['t_break'][i],
-                                     data['category'][i],
-                                     data['magnitude'][i],
-                                     data['change_prob'][i])
-                  for i in model_locs]
-
-        changedates = [change_products.changedate_val(models, qd)
+        changedates = [cp.changedate_val(models, qd)
                        for qd in query_dates]
 
-        changemag = [change_products.changemag_val(models, qd)
+        changemag = [cp.changemag_val(models, qd)
                      for qd in query_dates]
 
-        qa = [change_products.qa_val(models, qd)
+        qa = [cp.qa_val(models, qd)
               for qd in query_dates]
 
-        seglength = [change_products.seglength_val(models, qd)
+        seglength = [cp.seglength_val(models, qd)
                      for qd in query_dates]
 
-        lastchange = [change_products.lastchange_val(models, qd)
+        lastchange = [cp.lastchange_val(models, qd)
                       for qd in query_dates]
 
         for idx, qdate in enumerate(query_dates):
             year = dt.date.fromordinal(qdate).year
 
-            temp['ChangeMap'][year][arr_pos] = changedates[idx]
-            temp['ChangeMagMap'][year][arr_pos] = changemag[idx]
-            temp['QAMap'][year][arr_pos] = qa[idx]
-            temp['SegLength'][year][arr_pos] = seglength[idx]
-            temp['LastChange'][year][arr_pos] = lastchange[idx]
+            temp['ChangeMap'][year][row, col] = changedates[idx]
+            temp['ChangeMagMap'][year][row, col] = changemag[idx]
+            temp['QAMap'][year][row, col] = qa[idx]
+            temp['SegLength'][year][row, col] = seglength[idx]
+            temp['LastChange'][year][row, col] = lastchange[idx]
 
-    coverage = determine_coverage(line, x_locs)
+        col += 1
+
+        if col > 99:
+            row += 1
+            col = 0
 
     return temp, coverage
 
 
-def output_line(data, coverage, output_dir, h, v):
-    y_off = data.pop('y_off')
+def xyoff(h, v, chip_x, chip_y):
+    coord = geo_utils.GeoCoordinate(x=chip_x, y=chip_y)
+    _, geo = geo_utils.extent_from_hv(h, v)
+
+    rowcol = geo_utils.geo_to_rowcol(geo, coord)
+    return rowcol.column, rowcol.row
+
+
+def output_chip(data, output_dir, h, v):
+    chip_y = data.pop('chip_y')
+    chip_x = data.pop('chip_x')
+
+    x_off, y_off = xyoff(h, v, chip_x, chip_y)
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -141,15 +158,10 @@ def output_line(data, coverage, output_dir, h, v):
     for prod in data:
         for year in data[prod]:
             ds = get_raster_ds(output_dir, prod, year, h, v)
-            ds.GetRasterBand(1).WriteArray(data[prod][year].reshape(1, 5000), 0, y_off)
+            ds.GetRasterBand(1).WriteArray(data[prod][year], x_off, y_off)
 
             ds.FlushCache()
             ds = None
-
-    ds = get_raster_ds(output_dir, 'coverage', '', h, v)
-    ds.GetRasterBand(1).WriteArray(coverage.reshape(1, 5000), 0, y_off)
-    ds.FlushCache()
-    ds = None
 
 
 def get_raster_ds(output_dir, product, year, h, v):
@@ -193,18 +205,24 @@ def prod_data_type(product):
 
 def multi_output(output_dir, output_q, kill_count, h, v):
     count = 0
+    progress = 0
     while True:
         if count >= kill_count:
             break
 
-        outdata, coverage = output_q.get()
+        outdata = output_q.get()
 
         if outdata == 'kill':
             count += 1
             continue
 
-        log.debug('Outputting line: {0}'.format(outdata['y_off']))
-        output_line(outdata, coverage, output_dir, h, v)
+        log.debug('Outputting chip: {0} {1}'.format(outdata['chip_x'],
+                                                    outdata['chip_y']))
+        output_chip(outdata, output_dir, h, v)
+        progress += 1
+        log.debug('Total chips written: {}'.format(progress))
+
+    log.debug('Finalizing Writes')
 
 
 def multi_worker(input_q, output_q):
@@ -229,17 +247,17 @@ def multi_worker(input_q, output_q):
             log.exception('EXCEPTION')
             continue
 
-
-def single_run(input_dir, output_dir, h, v):
-    for infile in os.listdir(input_dir):
-        log.debug('received {}'.format(infile))
-        filename = os.path.split(infile)[-1]
-
-        map_dict, coverage = changemap_vals(infile)
-        map_dict['y_off'] = int(filename[13:-4]) - 1
-
-        log.debug('Outputting line: {0}'.format(map_dict['y_off']))
-        output_line(map_dict, coverage, output_dir, h, v)
+#
+# def single_run(input_dir, output_dir, h, v):
+#     for infile in os.listdir(input_dir):
+#         log.debug('received {}'.format(infile))
+#         filename = os.path.split(infile)[-1]
+#
+#         map_dict, coverage = changemap_vals(infile)
+#         map_dict['y_off'] = int(filename[13:-4]) - 1
+#
+#         log.debug('Outputting line: {0}'.format(map_dict['y_off']))
+#         output_line(map_dict, coverage, output_dir, h, v)
 
 
 def multi_run(input_dir, output_dir, num_procs, h, v):

@@ -10,7 +10,6 @@ import pickle
 
 from osgeo import gdal, osr
 import numpy as np
-import scipy.io as sio
 
 import geo_utils
 from class_products import ClassModel, class_primary, class_secondary, conf_primary, conf_secondary, fromto, sort_models
@@ -123,7 +122,7 @@ def classmap_vals(input, query_dates=QUERY_DATES):
         cl_fromto = [fromto(models, d) for d in query_dates]
 
         # ('CoverPrim', 'CoverSec', 'CoverConfPrim', 'CoverConfSec',
-         # 'CoverFromTo')
+        #  'CoverFromTo')
         for idx, qdate in enumerate(query_dates):
             year = dt.date.fromordinal(qdate).year
 
