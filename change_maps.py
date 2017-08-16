@@ -146,7 +146,7 @@ def xyoff(h, v, chip_x, chip_y):
     return rowcol.column, rowcol.row
 
 
-def output_chip(data, output_dir, h, v):
+def output_chip(data, coverage, output_dir, h, v):
     chip_y = data.pop('chip_y')
     chip_x = data.pop('chip_x')
 
@@ -162,6 +162,11 @@ def output_chip(data, output_dir, h, v):
 
             ds.FlushCache()
             ds = None
+
+    ds = get_raster_ds(output_dir, 'coverage', '', h, v)
+    ds.GetRasterBand(1).WriteArray(coverage, x_off, y_off)
+    ds.FlushCache()
+    ds = None
 
 
 def get_raster_ds(output_dir, product, year, h, v):
@@ -216,6 +221,8 @@ def multi_output(output_dir, output_q, kill_count, h, v):
             count += 1
             continue
 
+        outdata, coverage = outdata
+
         log.debug('Outputting chip: {0} {1}'.format(outdata['chip_x'],
                                                     outdata['chip_y']))
         output_chip(outdata, output_dir, h, v)
@@ -233,13 +240,10 @@ def multi_worker(input_q, output_q):
             log.debug('received {}'.format(infile))
 
             if infile == 'kill':
-                output_q.put(('kill', ''))
+                output_q.put('kill')
                 break
 
-            filename = os.path.split(infile)[-1]
-
             map_dict, coverage = changemap_vals(infile)
-            map_dict['y_off'] = int(filename[13:-4]) - 1
 
             log.debug('finished {}'.format(infile))
             output_q.put((map_dict, coverage))
