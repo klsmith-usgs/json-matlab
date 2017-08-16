@@ -85,7 +85,7 @@ def determine_coverage(data):
 
 def coords_frompath(file_path):
     parts = os.path.split(file_path)[-1].split('_')
-    return parts[1], parts[2]
+    return parts[1], parts[2][:-5]
 
 
 def changemap_vals(input, query_dates=QUERY_DATES):
