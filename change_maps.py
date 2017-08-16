@@ -111,33 +111,34 @@ def changemap_vals(input, query_dates=QUERY_DATES):
     row = 0
     col = 0
     for result in data:
-        models = [cp.ChangeModel(r['start_day'], r['end_day'], r['break_day'],
-                                 r['curve_qa'], [r[b]['magnitude'] for b in BAND_NAMES], r['change_probability'])
-                  for r in result['change_models']]
+        if result:
+            models = [cp.ChangeModel(r['start_day'], r['end_day'], r['break_day'],
+                                     r['curve_qa'], [r[b]['magnitude'] for b in BAND_NAMES], r['change_probability'])
+                      for r in result['change_models']]
 
-        changedates = [cp.changedate_val(models, qd)
-                       for qd in query_dates]
+            changedates = [cp.changedate_val(models, qd)
+                           for qd in query_dates]
 
-        changemag = [cp.changemag_val(models, qd)
-                     for qd in query_dates]
+            changemag = [cp.changemag_val(models, qd)
+                         for qd in query_dates]
 
-        qa = [cp.qa_val(models, qd)
-              for qd in query_dates]
+            qa = [cp.qa_val(models, qd)
+                  for qd in query_dates]
 
-        seglength = [cp.seglength_val(models, qd)
-                     for qd in query_dates]
+            seglength = [cp.seglength_val(models, qd)
+                         for qd in query_dates]
 
-        lastchange = [cp.lastchange_val(models, qd)
-                      for qd in query_dates]
+            lastchange = [cp.lastchange_val(models, qd)
+                          for qd in query_dates]
 
-        for idx, qdate in enumerate(query_dates):
-            year = dt.date.fromordinal(qdate).year
+            for idx, qdate in enumerate(query_dates):
+                year = dt.date.fromordinal(qdate).year
 
-            temp['ChangeMap'][year][row, col] = changedates[idx]
-            temp['ChangeMagMap'][year][row, col] = changemag[idx]
-            temp['QAMap'][year][row, col] = qa[idx]
-            temp['SegLength'][year][row, col] = seglength[idx]
-            temp['LastChange'][year][row, col] = lastchange[idx]
+                temp['ChangeMap'][year][row, col] = changedates[idx]
+                temp['ChangeMagMap'][year][row, col] = changemag[idx]
+                temp['QAMap'][year][row, col] = qa[idx]
+                temp['SegLength'][year][row, col] = seglength[idx]
+                temp['LastChange'][year][row, col] = lastchange[idx]
 
         col += 1
 
