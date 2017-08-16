@@ -54,7 +54,7 @@ def map_template():
 def get_json(path):
     if os.path.exists(path):
         with open(path, 'r') as f:
-            return json.loads(f.read())
+            return json.load(f)
     else:
         return None
 
