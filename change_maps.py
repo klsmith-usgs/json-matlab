@@ -70,7 +70,10 @@ def load_jsondata(data):
             col = int((d['x'] - d['chip_x']) / 30)
             row = int((d['chip_y'] - d['y']) / 30)
 
-            outdata[row][col] = json.loads(result)
+            try:
+                outdata[row][col] = json.loads(result)
+            except:
+                outdata[row][col] = None
 
     return outdata
 
