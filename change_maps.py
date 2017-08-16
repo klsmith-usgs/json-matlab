@@ -236,7 +236,7 @@ def multi_output(output_dir, output_q, kill_count, h, v):
 
         log.debug('Outputting chip: {0} {1}'.format(outdata['chip_x'],
                                                     outdata['chip_y']))
-        output_chip(outdata, output_dir, h, v)
+        output_chip(outdata, coverage, output_dir, h, v)
         progress += 1
         log.debug('Total chips written: {}'.format(progress))
 
