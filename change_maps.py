@@ -54,7 +54,7 @@ def map_template():
     for m in MAP_NAMES:
         ret[m] = {}
         for yr in YEARS:
-            ret[m][yr] = np.zeros(shape=(5000,))
+            ret[m][yr] = np.zeros(shape=(100, 100))
 
     return ret
 
