@@ -24,6 +24,14 @@ CONUS_ALBERS = osr.SpatialReference()
 CONUS_ALBERS.ImportFromEPSG(5070)
 CONUS_WKT = CONUS_ALBERS.ExportToWkt()
 
+BAND_NAMES = ('blue',
+              'green',
+              'red',
+              'nir',
+              'swir1',
+              'swir2',
+              'thermal')
+
 MAP_NAMES = ('ChangeMap', 'ChangeMagMap', 'QAMap', 'SegLength', 'LastChange')
 YEARS = tuple(i for i in range(1984, 2016))
 QUERY_DATES = tuple(dt.date(year=i, month=7, day=1).toordinal()
@@ -104,7 +112,7 @@ def changemap_vals(input, query_dates=QUERY_DATES):
     col = 0
     for result in data:
         models = [cp.ChangeModel(r['start_day'], r['end_day'], r['break_day'],
-                                 r['qa'], r['magnitudes'], r['change_prob'])
+                                 r['curve_qa'], [r[b]['magnitude'] for b in BAND_NAMES], r['change_prob'])
                   for r in result['change_models']]
 
         changedates = [cp.changedate_val(models, qd)
