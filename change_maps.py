@@ -64,15 +64,14 @@ def load_jsondata(data):
 
     if data is not None:
         for d in data:
-            result = d.get('result', 'null')
-
             # Could leverage geo_utils to do this
             col = int((d['x'] - d['chip_x']) / 30)
             row = int((d['chip_y'] - d['y']) / 30)
 
-            try:
+            if d.get('result_ok') is True:
+                result = d.get('result', 'null')
                 outdata[row][col] = json.loads(result)
-            except:
+            else:
                 outdata[row][col] = None
 
     return outdata
@@ -106,7 +105,7 @@ def changemap_vals(input, query_dates=QUERY_DATES):
     for result in data:
         models = [cp.ChangeModel(r['start_day'], r['end_day'], r['break_day'],
                                  r['qa'], r['magnitudes'], r['change_prob'])
-                  for r in result]
+                  for r in result['change_models']]
 
         changedates = [cp.changedate_val(models, qd)
                        for qd in query_dates]
