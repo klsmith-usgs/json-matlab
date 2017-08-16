@@ -112,7 +112,7 @@ def changemap_vals(input, query_dates=QUERY_DATES):
     col = 0
     for result in data:
         models = [cp.ChangeModel(r['start_day'], r['end_day'], r['break_day'],
-                                 r['curve_qa'], [r[b]['magnitude'] for b in BAND_NAMES], r['change_prob'])
+                                 r['curve_qa'], [r[b]['magnitude'] for b in BAND_NAMES], r['change_probability'])
                   for r in result['change_models']]
 
         changedates = [cp.changedate_val(models, qd)
