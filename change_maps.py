@@ -282,7 +282,8 @@ def multi_run(input_dir, output_dir, num_procs, h, v):
     worker_count = num_procs - 1
 
     for f in os.listdir(input_dir):
-        input_q.put(os.path.join(input_dir, f))
+        if f[-5:] == '.json':
+            input_q.put(os.path.join(input_dir, f))
 
     for _ in range(worker_count):
         input_q.put('kill')
