@@ -46,12 +46,12 @@ def simplify_mask(result):
 
     models['processing_mask'] = [int(b) for b in models['processing_mask']]
 
-    return json.dumps(models)
+    return json.dumps(models, separators=(',', ':'))
 
 
 def write_json(data, output_path):
     with open(output_path, 'wr') as f:
-        f.write(json.dumps(data))
+        f.write(json.dumps(data, separators=(',', ':')))
 
 
 if __name__ == '__main__':
