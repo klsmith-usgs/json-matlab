@@ -65,7 +65,7 @@ def fromto(models, ord_date):
         next_val = 0
         yr = dt.date.fromordinal(m.start_day).year
 
-        if idx + 1 <= len(models):
+        if idx < len(models):
             next_val = (models[idx + 1]
                         .class_vals[np.argmax(models[idx + 1]
                                               .class_probs[0])])
