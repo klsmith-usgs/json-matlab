@@ -62,8 +62,13 @@ def fromto(models, ord_date):
     # prev_class = 0
     for idx, m in enumerate(models):
         class_val = m.class_vals[np.argmax(m.class_probs[0])]
-        next_val = models[idx + 1].class_vals[np.argmax(models[idx + 1].class_probs[0])]
+        next_val = 0
         yr = dt.date.fromordinal(m.start_day).year
+
+        if idx + 1 <= len(models):
+            next_val = (models[idx + 1]
+                        .class_vals[np.argmax(models[idx + 1]
+                                              .class_probs[0])])
 
         if yr == query_yr:
             ret = int('{}{}'.format(class_val, next_val))
