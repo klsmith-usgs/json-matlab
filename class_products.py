@@ -55,17 +55,23 @@ def fromto(models, ord_date):
     if ord_date <= 0:
         return 0
 
+    ret = 0
+
     query_yr = dt.date.fromordinal(ord_date).year
 
-    prev_class = 0
-    for m in models:
+    # prev_class = 0
+    for idx, m in enumerate(models):
         class_val = m.class_vals[np.argmax(m.class_probs[0])]
+        next_val = models[idx + 1].class_vals[np.argmax(models[idx + 1].class_probs[0])]
         yr = dt.date.fromordinal(m.start_day).year
 
         if yr == query_yr:
-            return int('{}{}'.format(prev_class, class_val))
+            ret = int('{}{}'.format(class_val, next_val))
+            # return int('{}{}'.format(prev_class, class_val))
 
-        prev_class = class_val
+        # prev_class = class_val
+
+    return ret
 
 
 def conf_primary(models, ord_date):
