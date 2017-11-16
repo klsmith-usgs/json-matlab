@@ -65,7 +65,7 @@ def map_template():
 
 
 def get_raster_ds(output_dir, product, year, h, v):
-    key = 'h{:02d}v{:02d}_{0}_{1}'.format(h, v, product, year)
+    key = 'h{:02d}v{:02d}_{}_{}'.format(h, v, product, year)
 
     file_path = os.path.join(output_dir, key + '.tif')
 
