@@ -35,12 +35,12 @@ SEGCHG_CT.SetColorEntry(77, (255, 255, 255, 0))  # White Snow
 SEGCHG_CT.SetColorEntry(88, (111, 68, 68, 0))  # Brown Barren
 
 for i in range(1, 9):
-    SEGCHG_CT.SetColorEntry(i * 10, (162, 1, 255, 0))
+    SEGCHG_CT.SetColorEntry(i * 10, (145, 145, 145, 0))
 
 for i in range(1, 9):
     for j in range(1, 9):
         if i != j:
-            SEGCHG_CT.SetColorEntry(int('{}{}'.format(i, j)), (255, 9, 177, 0))
+            SEGCHG_CT.SetColorEntry(int('{}{}'.format(i, j)), (162, 1, 255, 0))
 
 
 def map_template():
