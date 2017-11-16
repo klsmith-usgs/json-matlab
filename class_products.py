@@ -51,7 +51,7 @@ def class_secondary(models, ord_date):
     return 0
 
 
-def fromto(models, ord_date):
+def segchange(models, ord_date):
     if ord_date <= 0:
         return 0
 

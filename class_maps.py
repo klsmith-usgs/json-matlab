@@ -12,35 +12,35 @@ from osgeo import gdal
 import numpy as np
 
 import geo_utils
-from class_products import ClassModel, class_primary, class_secondary, conf_primary, conf_secondary, fromto, sort_models
+from class_products import ClassModel, class_primary, class_secondary, conf_primary, conf_secondary, segchange, sort_models
 from logger import log
 
 
 CONUS_WKT = 'PROJCS["Albers",GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378140,298.2569999999957,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433],AUTHORITY["EPSG","4326"]],PROJECTION["Albers_Conic_Equal_Area"],PARAMETER["standard_parallel_1",29.5],PARAMETER["standard_parallel_2",45.5],PARAMETER["latitude_of_center",23],PARAMETER["longitude_of_center",-96],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]]]'
 
-MAP_NAMES = ('CoverPrim', 'CoverSec', 'CoverConfPrim', 'CoverConfSec', 'CoverFromTo')
+MAP_NAMES = ('CoverPrim', 'CoverSec', 'CoverConfPrim', 'CoverConfSec', 'SegChange')
 YEARS = tuple(i for i in range(1984, 2016))
 QUERY_DATES = tuple(dt.date(year=i, month=7, day=1).toordinal()
                     for i in YEARS)
 
-FROMTO_CT = gdal.ColorTable()
-FROMTO_CT.SetColorEntry(0, (0, 0, 0, 0))  # Black
-FROMTO_CT.SetColorEntry(11, (227, 26, 28, 0))  # Red Developed
-FROMTO_CT.SetColorEntry(22, (255, 127, 0, 0))  # Orange Ag
-FROMTO_CT.SetColorEntry(33, (253, 191, 111, 0))  # Yellow Grass
-FROMTO_CT.SetColorEntry(44, (51, 160, 44, 0))  # Green Tree
-FROMTO_CT.SetColorEntry(55, (31, 120, 180, 0))  # Blue Water
-FROMTO_CT.SetColorEntry(66, (166, 206, 227, 0))  # Lt. Blue Wet
-FROMTO_CT.SetColorEntry(77, (255, 255, 255, 0))  # White Snow
-FROMTO_CT.SetColorEntry(88, (111, 68, 68, 0))  # Brown Barren
+SEGCHG_CT = gdal.ColorTable()
+SEGCHG_CT.SetColorEntry(0, (0, 0, 0, 0))  # Black
+SEGCHG_CT.SetColorEntry(11, (227, 26, 28, 0))  # Red Developed
+SEGCHG_CT.SetColorEntry(22, (255, 127, 0, 0))  # Orange Ag
+SEGCHG_CT.SetColorEntry(33, (253, 191, 111, 0))  # Yellow Grass
+SEGCHG_CT.SetColorEntry(44, (51, 160, 44, 0))  # Green Tree
+SEGCHG_CT.SetColorEntry(55, (31, 120, 180, 0))  # Blue Water
+SEGCHG_CT.SetColorEntry(66, (166, 206, 227, 0))  # Lt. Blue Wet
+SEGCHG_CT.SetColorEntry(77, (255, 255, 255, 0))  # White Snow
+SEGCHG_CT.SetColorEntry(88, (111, 68, 68, 0))  # Brown Barren
 
 for i in range(1, 9):
-    FROMTO_CT.SetColorEntry(i * 10, (255, 9, 177, 0))
+    SEGCHG_CT.SetColorEntry(i * 10, (255, 9, 177, 0))
 
 for i in range(1, 9):
     for j in range(1, 9):
         if i != j:
-            FROMTO_CT.SetColorEntry(int('{}{}'.format(i, j)), (251, 154, 153, 0))
+            SEGCHG_CT.SetColorEntry(int('{}{}'.format(i, j)), (251, 154, 153, 0))
 
 
 def map_template():
@@ -65,7 +65,7 @@ def map_template():
 
 
 def get_raster_ds(output_dir, product, year, h, v):
-    key = '{0}_{1}'.format(product, year)
+    key = 'h{:02d}v{:02d}_{0}_{1}'.format(h, v, product, year)
 
     file_path = os.path.join(output_dir, key + '.tif')
 
@@ -74,8 +74,8 @@ def get_raster_ds(output_dir, product, year, h, v):
     else:
         ds = create_geotif(file_path, product, h, v)
 
-        if product == 'CoverFromTo':
-            ds.GetRasterBand(1).SetColorTable(FROMTO_CT)
+        if product == 'SegChange':
+            ds.GetRasterBand(1).SetColorTable(SEGCHG_CT)
 
     return ds
 
@@ -139,7 +139,7 @@ def classmap_vals(input, query_dates=QUERY_DATES):
         cl_sc = [class_secondary(models, d) for d in query_dates]
         conf_pr = [conf_primary(models, d) for d in query_dates]
         conf_sc = [conf_secondary(models, d) for d in query_dates]
-        cl_fromto = [fromto(models, d) for d in query_dates]
+        cl_segchg = [segchange(models, d) for d in query_dates]
 
         # ('CoverPrim', 'CoverSec', 'CoverConfPrim', 'CoverConfSec',
         #  'CoverFromTo')
@@ -150,7 +150,7 @@ def classmap_vals(input, query_dates=QUERY_DATES):
             temp['CoverSec'][year][row, col] = cl_sc[idx]
             temp['CoverConfPrim'][year][row, col] = conf_pr[idx]
             temp['CoverConfSec'][year][row, col] = conf_sc[idx]
-            temp['CoverFromTo'][year][row, col] = cl_fromto[idx]
+            temp['SegChange'][year][row, col] = cl_segchg[idx]
 
         col += 1
 
