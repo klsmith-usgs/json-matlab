@@ -3,6 +3,7 @@ Classification Maps for CCDC visualizations
 """
 
 import os
+import sys
 import multiprocessing as mp
 import datetime as dt
 import pickle
@@ -21,6 +22,25 @@ MAP_NAMES = ('CoverPrim', 'CoverSec', 'CoverConfPrim', 'CoverConfSec', 'CoverFro
 YEARS = tuple(i for i in range(1984, 2016))
 QUERY_DATES = tuple(dt.date(year=i, month=7, day=1).toordinal()
                     for i in YEARS)
+
+FROMTO_CT = gdal.ColorTable()
+FROMTO_CT.SetColorEntry(0, (0, 0, 0, 0))  # Black
+FROMTO_CT.SetColorEntry(11, (0, 227, 26, 28))  # Red Developed
+FROMTO_CT.SetColorEntry(22, (0, 255, 127, 0))  # Orange Ag
+FROMTO_CT.SetColorEntry(33, (0, 253, 191, 111))  # Yellow Grass
+FROMTO_CT.SetColorEntry(44, (0, 51, 160, 44))  # Green Tree
+FROMTO_CT.SetColorEntry(55, (0, 31, 120, 180))  # Blue Water
+FROMTO_CT.SetColorEntry(66, (0, 166, 206, 227))  # Lt. Blue Wet
+FROMTO_CT.SetColorEntry(77, (0, 255, 255, 255))  # White Snow
+FROMTO_CT.SetColorEntry(88, (0, 111, 68, 68))  # Brown Barren
+
+for i in range(1, 9):
+    FROMTO_CT.SetColorEntry(i * 10, (0, 255, 9, 177))
+
+for i in range(1, 9):
+    for j in range(1, 9):
+        if i != j:
+            FROMTO_CT.SetColorEntry(int('{}{}'.format(i, j)), (0, 251, 154, 153))
 
 
 def map_template():
@@ -53,6 +73,9 @@ def get_raster_ds(output_dir, product, year, h, v):
         ds = gdal.Open(file_path, gdal.GA_Update)
     else:
         ds = create_geotif(file_path, product, h, v)
+
+        if product == 'CoverFromTo':
+            ds.GetRasterBand(1).SetColorTable(FROMTO_CT)
 
     return ds
 
@@ -160,7 +183,6 @@ def output_chip(data, output_dir, h, v):
             ds = get_raster_ds(output_dir, prod, year, h, v)
             ds.GetRasterBand(1).WriteArray(data[prod][year], x_off, y_off)
 
-            ds.FlushCache()
             ds = None
 
 
@@ -227,14 +249,18 @@ def multi_run(input_dir, output_dir, num_procs, h, v):
     multi_output(output_dir, output_q, worker_count, h, v)
 
 
-def main():
-    indir = r'C:\temp\class\results'
-    outdir = r'C:\temp\class\maps'
-    procs = 4
-    h = 5
-    v = 2
+def main(indir, outdir, h, v, procs):
+    # indir = r'C:\temp\class\results'
+    # outdir = r'C:\temp\class\maps'
+    # procs = 4
+    # h = 5
+    # v = 2
 
     multi_run(indir, outdir, procs, h, v)
 
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) < 6:
+        print('Insufficient Args')
+
+    main(sys.argv[1], sys.argv[2], int(sys.argv[3]),
+         int(sys.argv[4]), int(sys.argv[5]))
