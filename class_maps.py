@@ -25,22 +25,22 @@ QUERY_DATES = tuple(dt.date(year=i, month=7, day=1).toordinal()
 
 FROMTO_CT = gdal.ColorTable()
 FROMTO_CT.SetColorEntry(0, (0, 0, 0, 0))  # Black
-FROMTO_CT.SetColorEntry(11, (0, 227, 26, 28))  # Red Developed
-FROMTO_CT.SetColorEntry(22, (0, 255, 127, 0))  # Orange Ag
-FROMTO_CT.SetColorEntry(33, (0, 253, 191, 111))  # Yellow Grass
-FROMTO_CT.SetColorEntry(44, (0, 51, 160, 44))  # Green Tree
-FROMTO_CT.SetColorEntry(55, (0, 31, 120, 180))  # Blue Water
-FROMTO_CT.SetColorEntry(66, (0, 166, 206, 227))  # Lt. Blue Wet
-FROMTO_CT.SetColorEntry(77, (0, 255, 255, 255))  # White Snow
-FROMTO_CT.SetColorEntry(88, (0, 111, 68, 68))  # Brown Barren
+FROMTO_CT.SetColorEntry(11, (227, 26, 28, 0))  # Red Developed
+FROMTO_CT.SetColorEntry(22, (255, 127, 0, 0))  # Orange Ag
+FROMTO_CT.SetColorEntry(33, (253, 191, 111, 0))  # Yellow Grass
+FROMTO_CT.SetColorEntry(44, (51, 160, 44, 0))  # Green Tree
+FROMTO_CT.SetColorEntry(55, (31, 120, 180, 0))  # Blue Water
+FROMTO_CT.SetColorEntry(66, (166, 206, 227, 0))  # Lt. Blue Wet
+FROMTO_CT.SetColorEntry(77, (255, 255, 255, 0))  # White Snow
+FROMTO_CT.SetColorEntry(88, (111, 68, 68, 0))  # Brown Barren
 
 for i in range(1, 9):
-    FROMTO_CT.SetColorEntry(i * 10, (0, 255, 9, 177))
+    FROMTO_CT.SetColorEntry(i * 10, (255, 9, 177, 0))
 
 for i in range(1, 9):
     for j in range(1, 9):
         if i != j:
-            FROMTO_CT.SetColorEntry(int('{}{}'.format(i, j)), (0, 251, 154, 153))
+            FROMTO_CT.SetColorEntry(int('{}{}'.format(i, j)), (251, 154, 153, 0))
 
 
 def map_template():
