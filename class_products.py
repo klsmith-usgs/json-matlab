@@ -68,10 +68,10 @@ def segchange(models, ord_date):
                 next_val = (models[idx + 1]
                             .class_vals[np.argmax(models[idx + 1]
                                                   .class_probs[0])])
-
-                ret = int('{}{}'.format(class_val, next_val))
             else:
-                ret = class_val
+                next_val = 0
+
+            ret = int('{}{}'.format(class_val, next_val))
 
             break
 
