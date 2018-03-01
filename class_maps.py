@@ -23,24 +23,42 @@ YEARS = tuple(i for i in range(1984, 2016))
 QUERY_DATES = tuple(dt.date(year=i, month=7, day=1).toordinal()
                     for i in YEARS)
 
-SEGCHG_CT = gdal.ColorTable()
-SEGCHG_CT.SetColorEntry(0, (0, 0, 0, 0))  # Black
-SEGCHG_CT.SetColorEntry(11, (227, 26, 28, 0))  # Red Developed
-SEGCHG_CT.SetColorEntry(22, (255, 127, 0, 0))  # Orange Ag
-SEGCHG_CT.SetColorEntry(33, (253, 191, 111, 0))  # Yellow Grass
-SEGCHG_CT.SetColorEntry(44, (51, 160, 44, 0))  # Green Tree
-SEGCHG_CT.SetColorEntry(55, (31, 120, 180, 0))  # Blue Water
-SEGCHG_CT.SetColorEntry(66, (166, 206, 227, 0))  # Lt. Blue Wet
-SEGCHG_CT.SetColorEntry(77, (255, 255, 255, 0))  # White Snow
-SEGCHG_CT.SetColorEntry(88, (111, 68, 68, 0))  # Brown Barren
 
-for i in range(1, 9):
-    SEGCHG_CT.SetColorEntry(i * 10, (145, 145, 145, 0))
+def getcolortable():
+    ct = gdal.ColorTable()
+    ct.SetColorEntry(0, (0, 0, 0, 0))  # Black
+    ct.SetColorEntry(1, (238, 0, 0, 0))  # Red Developed
+    ct.SetColorEntry(2, (171, 112, 40, 0))  # Orange Ag
+    ct.SetColorEntry(3, (227, 227, 194, 0))  # Yellow Grass
+    ct.SetColorEntry(4, (28, 99, 48, 0))  # Green Tree
+    ct.SetColorEntry(5, (71, 107, 161, 0))  # Blue Water
+    ct.SetColorEntry(6, (186, 217, 235, 0))  # Lt. Blue Wet
+    ct.SetColorEntry(7, (255, 255, 255, 0))  # White Snow
+    ct.SetColorEntry(8, (179, 174, 163, 0))  # Brown Barren
+    ct.SetColorEntry(9, (251, 154, 153, 0))  # Pink Change
 
-for i in range(1, 9):
-    for j in range(1, 9):
-        if i != j:
-            SEGCHG_CT.SetColorEntry(int('{}{}'.format(i, j)), (162, 1, 255, 0))
+    # SegChange Values
+    # Same class
+    ct.SetColorEntry(11, (238, 0, 0, 0))  # Red Developed
+    ct.SetColorEntry(22, (171, 112, 40, 0))  # Orange Ag
+    ct.SetColorEntry(33, (227, 227, 194, 0))  # Yellow Grass
+    ct.SetColorEntry(44, (28, 99, 48, 0))  # Green Tree
+    ct.SetColorEntry(55, (71, 107, 161, 0))  # Blue Water
+    ct.SetColorEntry(66, (186, 217, 235, 0))  # Lt. Blue Wet
+    ct.SetColorEntry(77, (255, 255, 255, 0))  # White Snow
+    ct.SetColorEntry(88, (179, 174, 163, 0))  # Brown Barren
+
+    for i in range(1, 9):
+        ct.SetColorEntry(i * 10, (145, 145, 145, 0))  # End of Time Series
+
+        for j in range(1, 9):
+            if i != j:
+                ct.SetColorEntry(int(f'{i}{j}'), (162, 1, 255, 0))  # Different class
+
+    return ct
+
+
+COLOR_TABLE = getcolortable()
 
 
 def map_template():
@@ -74,8 +92,8 @@ def get_raster_ds(output_dir, product, year, h, v):
     else:
         ds = create_geotif(file_path, product, h, v)
 
-        if product == 'SegChange':
-            ds.GetRasterBand(1).SetColorTable(SEGCHG_CT)
+        if 'conf' not in product:
+            ds.GetRasterBand(1).SetColorTable(COLOR_TABLE)
 
     return ds
 
@@ -180,10 +198,13 @@ def output_chip(data, output_dir, h, v):
 
     for prod in data:
         for year in data[prod]:
-            ds = get_raster_ds(output_dir, prod, year, h, v)
-            ds.GetRasterBand(1).WriteArray(data[prod][year], x_off, y_off)
+            try:
+                ds = get_raster_ds(output_dir, prod, year, h, v)
+                ds.GetRasterBand(1).WriteArray(data[prod][year], x_off, y_off)
 
-            ds = None
+                ds = None
+            except Exception as err:
+                log.exception(err)
 
 
 def multi_output(output_dir, output_q, kill_count, h, v):
