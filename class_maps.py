@@ -92,7 +92,7 @@ def get_raster_ds(output_dir, product, year, h, v):
     else:
         ds = create_geotif(file_path, product, h, v)
 
-        if 'conf' not in product:
+        if 'Conf' not in product:
             ds.GetRasterBand(1).SetColorTable(COLOR_TABLE)
 
     return ds
