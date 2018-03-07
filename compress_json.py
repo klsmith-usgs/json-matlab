@@ -14,7 +14,7 @@ def run(input_path, output_path, cpus):
 
     pool = mp.Pool(processes=cpus)
 
-    files = [os.path.join(input_path, f) for f in os.listdir(input_path)]
+    files = [os.path.join(input_path, f) for f in os.listdir(input_path) if f[-4:] == 'json']
 
     pool.map(worker, ((f, output_path) for f in files))
 
