@@ -146,7 +146,7 @@ def classmap_vals(input, query_dates=QUERY_DATES):
     col = 0
     for result in data:
         models = [ClassModel(class_probs=r['class_probs'],
-                             class_vals=r['class_vals'],
+                             class_vals=tuple(range(0, 9)),
                              end_day=r['end_day'],
                              start_day=r['start_day'])
                   for r in result]
