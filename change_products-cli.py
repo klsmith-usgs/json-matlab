@@ -12,7 +12,7 @@ parser.add_argument('h', help='ARD Grid h value.', type=int)
 parser.add_argument('v', help='ARD Grid v value.', type=int)
 parser.add_argument('-p', '--proc',
                     help='Number of child processes to use.',
-                    default=1, type=int, metavar='')
+                    default=4, type=int, metavar='')
 
 args = parser.parse_args()
 

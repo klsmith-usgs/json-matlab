@@ -3,6 +3,7 @@ Change Maps for CCDC visualizations
 """
 
 import os
+import sys
 import multiprocessing as mp
 import datetime as dt
 import json
@@ -72,10 +73,10 @@ def load_jsondata(data):
             col = int((d['x'] - d['chip_x']) / 30)
             row = int((d['chip_y'] - d['y']) / 30)
 
-            if d.get('result_ok') is True:
+            try:
                 result = d.get('result', 'null')
                 outdata[row][col] = json.loads(result)
-            else:
+            except:
                 outdata[row][col] = None
 
     return outdata
@@ -170,14 +171,14 @@ def output_chip(data, coverage, output_dir, h, v):
             ds.FlushCache()
             ds = None
 
-    ds = get_raster_ds(output_dir, 'coverage', '', h, v)
-    ds.GetRasterBand(1).WriteArray(coverage, x_off, y_off)
-    ds.FlushCache()
-    ds = None
+    # ds = get_raster_ds(output_dir, 'coverage', '', h, v)
+    # ds.GetRasterBand(1).WriteArray(coverage, x_off, y_off)
+    # ds.FlushCache()
+    # ds = None
 
 
 def get_raster_ds(output_dir, product, year, h, v):
-    key = '{0}_{1}'.format(product, year)
+    key = 'h{:02d}v{:02d}_{}_{}'.format(h, v, product, year)
 
     file_path = os.path.join(output_dir, key + '.tif')
 
@@ -218,6 +219,9 @@ def prod_data_type(product):
 def multi_output(output_dir, output_q, kill_count, h, v):
     count = 0
     progress = 0
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
     while True:
         if count >= kill_count:
             break
@@ -290,23 +294,23 @@ def multi_run(input_dir, output_dir, num_procs, h, v):
                    name='Process-{}'.format(_)).start()
 
     multi_output(output_dir, output_q, worker_count, h, v)
-#
-#
-# if __name__ == '__main__':
-#     if len(sys.argv) < 6:
-#         indir = raw_input('Input directory: ')
-#         outdir = raw_input('Output directory: ')
-#         cpu = raw_input('Number of CPU\'s: ')
-#         horiz = raw_input('H: ')
-#         vert = raw_input('V: ')
-#     else:
-#         indir = sys.argv[1]
-#         outdir = sys.argv[2]
-#         cpu = int(sys.argv[3])
-#         horiz = sys.argv[4]
-#         vert = sys.argv[5]
-#
-#     if cpu < 2:
-#         single_run(indir, outdir, horiz, vert)
-#     else:
-#         multi_run(indir, outdir, int(cpu), int(horiz), int(vert))
+
+
+if __name__ == '__main__':
+    # if len(sys.argv) < 6:
+    #     indir = raw_input('Input directory: ')
+    #     outdir = raw_input('Output directory: ')
+    #     cpu = raw_input('Number of CPU\'s: ')
+    #     horiz = raw_input('H: ')
+    #     vert = raw_input('V: ')
+    # else:
+    indir = sys.argv[1]
+    outdir = sys.argv[2]
+    cpu = int(sys.argv[3])
+    horiz = sys.argv[4]
+    vert = sys.argv[5]
+
+    # if cpu < 2:
+    #     single_run(indir, outdir, horiz, vert)
+    # else:
+    multi_run(indir, outdir, int(cpu), int(horiz), int(vert))
