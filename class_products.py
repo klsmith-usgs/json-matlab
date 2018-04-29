@@ -5,7 +5,8 @@ import numpy as np
 
 
 ClassModel = namedtuple('ClassModel', ['start_day', 'end_day',
-                                       'class_probs', 'class_vals'])
+                                       'class_probs', 'class_vals',
+                                       'break_day'])
 
 trans_class = 9
 
@@ -51,7 +52,7 @@ def class_secondary(models, ord_date):
     return 0
 
 
-def segchange(models, ord_date):
+def trans_end(models, ord_date):
     if ord_date <= 0:
         return 0
 
@@ -77,6 +78,32 @@ def segchange(models, ord_date):
 
     return ret
 
+
+def trans_break(models, ord_date):
+    if ord_date <= 0:
+        return 0
+
+    ret = 0
+    query_yr = dt.date.fromordinal(ord_date).year
+
+    for idx, m in enumerate(models):
+        yr = dt.date.fromordinal(m.break_day).year
+
+        if yr == query_yr:
+            class_val = m.class_vals[np.argmax(m.class_probs[0])]
+
+            if idx + 1 < len(models):
+                next_val = (models[idx + 1]
+                            .class_vals[np.argmax(models[idx + 1]
+                                                  .class_probs[0])])
+            else:
+                next_val = 0
+
+            ret = int('{}{}'.format(class_val, next_val))
+
+            break
+
+    return ret
 
 def conf_primary(models, ord_date):
     if ord_date <= 0:

@@ -7,18 +7,20 @@ import sys
 import multiprocessing as mp
 import datetime as dt
 import pickle
+import json
 
 from osgeo import gdal
 import numpy as np
 
 import geo_utils
-from class_products import ClassModel, class_primary, class_secondary, conf_primary, conf_secondary, segchange, sort_models
+from class_products import ClassModel, class_primary, class_secondary, \
+    conf_primary, conf_secondary, trans_break, trans_end, sort_models
 from logger import log
 
 
 CONUS_WKT = 'PROJCS["Albers",GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378140,298.2569999999957,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433],AUTHORITY["EPSG","4326"]],PROJECTION["Albers_Conic_Equal_Area"],PARAMETER["standard_parallel_1",29.5],PARAMETER["standard_parallel_2",45.5],PARAMETER["latitude_of_center",23],PARAMETER["longitude_of_center",-96],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]]]'
 
-MAP_NAMES = ('CoverPrim', 'CoverSec', 'CoverConfPrim', 'CoverConfSec', 'SegChange')
+MAP_NAMES = ('CoverPrim', 'CoverSec', 'CoverConfPrim', 'CoverConfSec', 'TransEnd', 'TransBreak')
 YEARS = tuple(i for i in range(1984, 2016))
 QUERY_DATES = tuple(dt.date(year=i, month=7, day=1).toordinal()
                     for i in YEARS)
@@ -134,9 +136,42 @@ def coords_frompath(file_path):
     return parts[1], parts[2]
 
 
-def classmap_vals(input, query_dates=QUERY_DATES):
-    data = open_classpickle(input)
-    chip_x, chip_y = coords_frompath(input)
+def get_json(path):
+    if os.path.exists(path):
+        with open(path, 'r') as f:
+            return json.load(f)
+    else:
+        return None
+
+
+def load_jsondata(data):
+    outdata = np.full(fill_value=None, shape=(100, 100), dtype=object)
+
+    if data is not None:
+        for d in data:
+            # Could leverage geo_utils to do this
+            col = int((d['x'] - d['chip_x']) / 30)
+            row = int((d['chip_y'] - d['y']) / 30)
+
+            try:
+                result = d.get('result', 'null')
+                outdata[row][col] = json.loads(result)
+            except:
+                outdata[row][col] = None
+
+    return outdata
+
+
+def findchgmodel(models, start_day):
+    for m in models:
+        if m['start_day'] == start_day:
+            return m
+
+
+def classmap_vals(classfile, changefile, query_dates=QUERY_DATES):
+    cldata = open_classpickle(classfile)
+    chdata = load_jsondata(get_json(changefile)).flatten()
+    chip_x, chip_y = coords_frompath(classfile)
 
     temp = map_template()
     temp['chip_x'] = int(chip_x)
@@ -144,12 +179,13 @@ def classmap_vals(input, query_dates=QUERY_DATES):
 
     row = 0
     col = 0
-    for result in data:
+    for i, result in enumerate(cldata):
         models = [ClassModel(class_probs=r['class_probs'],
                              class_vals=tuple(range(0, 9)),
                              end_day=r['end_day'],
-                             start_day=r['start_day'])
-                  for r in result]
+                             start_day=r['start_day'],
+                             break_day=findchgmodel(chdata[i]['change_models'], r['start_day'])['break_day'])
+                  for j, r in enumerate(result)]
 
         models = sort_models(models)
 
@@ -157,10 +193,9 @@ def classmap_vals(input, query_dates=QUERY_DATES):
         cl_sc = [class_secondary(models, d) for d in query_dates]
         conf_pr = [conf_primary(models, d) for d in query_dates]
         conf_sc = [conf_secondary(models, d) for d in query_dates]
-        cl_segchg = [segchange(models, d) for d in query_dates]
+        tr_br = [trans_break(models, d) for d in query_dates]
+        tr_end = [trans_end(models, d) for d in query_dates]
 
-        # ('CoverPrim', 'CoverSec', 'CoverConfPrim', 'CoverConfSec',
-        #  'CoverFromTo')
         for idx, qdate in enumerate(query_dates):
             year = dt.date.fromordinal(qdate).year
 
@@ -168,7 +203,8 @@ def classmap_vals(input, query_dates=QUERY_DATES):
             temp['CoverSec'][year][row, col] = cl_sc[idx]
             temp['CoverConfPrim'][year][row, col] = conf_pr[idx]
             temp['CoverConfSec'][year][row, col] = conf_sc[idx]
-            temp['SegChange'][year][row, col] = cl_segchg[idx]
+            temp['TransEnd'][year][row, col] = tr_end[idx]
+            temp['TransBreak'][year][row, col] = tr_br[idx]
 
         col += 1
 
@@ -229,7 +265,15 @@ def multi_output(output_dir, output_q, kill_count, h, v):
     log.debug('Finalizing Writes')
 
 
-def multi_worker(input_q, output_q):
+def findchangfile(classfile, changedir):
+    filename = os.path.split(classfile)[-1]
+    changefiles = [f[:-5] for f in os.listdir(changedir)]
+
+    if filename[:-8] in changefiles:
+        return os.path.join(changedir, '{}.json'.format(filename[:-8]))
+
+
+def multi_worker(input_q, output_q, inchange):
     while True:
         try:
             infile = input_q.get()
@@ -240,7 +284,12 @@ def multi_worker(input_q, output_q):
                 output_q.put('kill')
                 break
 
-            map_dict = classmap_vals(infile)
+            changefile = findchangfile(infile, inchange)
+
+            if changefile is None:
+                continue
+
+            map_dict = classmap_vals(infile, changefile)
 
             log.debug('Finished: {0} {1}'.format(map_dict['chip_x'],
                                                  map_dict['chip_y']))
@@ -250,38 +299,39 @@ def multi_worker(input_q, output_q):
             continue
 
 
-def multi_run(input_dir, output_dir, num_procs, h, v):
+def multi_run(inclass, inchange, output_dir, num_procs, h, v):
     input_q = mp.Queue()
     output_q = mp.Queue()
 
     worker_count = num_procs - 1
 
-    for f in os.listdir(input_dir):
-        input_q.put(os.path.join(input_dir, f))
+    for f in os.listdir(inclass):
+        input_q.put(os.path.join(inclass, f))
 
     for _ in range(worker_count):
         input_q.put('kill')
 
     for _ in range(worker_count):
         mp.Process(target=multi_worker,
-                   args=(input_q, output_q),
+                   args=(input_q, output_q, inchange),
                    name='Process-{}'.format(_)).start()
 
     multi_output(output_dir, output_q, worker_count, h, v)
 
 
-def main(indir, outdir, h, v, procs):
+def main(inclass, inchng, outdir, h, v, procs):
     # indir = r'C:\temp\class\results'
     # outdir = r'C:\temp\class\maps'
     # procs = 4
     # h = 5
     # v = 2
 
-    multi_run(indir, outdir, procs, h, v)
+    multi_run(inclass, inchng, outdir, procs, h, v)
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 6:
         print('Insufficient Args')
 
-    main(sys.argv[1], sys.argv[2], int(sys.argv[3]),
-         int(sys.argv[4]), int(sys.argv[5]))
+    main(sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4]),
+         int(sys.argv[5]), int(sys.argv[6]))
