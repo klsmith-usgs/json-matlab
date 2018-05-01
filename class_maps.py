@@ -181,7 +181,7 @@ def classmap_vals(classfile, changefile, query_dates=QUERY_DATES):
     col = 0
     for i, result in enumerate(cldata):
         models = [ClassModel(class_probs=r['class_probs'],
-                             class_vals=tuple(range(0, 9)),
+                             class_vals=r['class_vals'],
                              end_day=r['end_day'],
                              start_day=r['start_day'],
                              break_day=findchgmodel(chdata[i]['change_models'], r['start_day'])['break_day'])

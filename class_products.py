@@ -87,6 +87,9 @@ def trans_break(models, ord_date):
     query_yr = dt.date.fromordinal(ord_date).year
 
     for idx, m in enumerate(models):
+        if m.break_day < 1:
+            continue
+
         yr = dt.date.fromordinal(m.break_day).year
 
         if yr == query_yr:
