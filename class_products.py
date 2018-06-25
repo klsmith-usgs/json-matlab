@@ -26,7 +26,7 @@ def class_primary(models, ord_date):
     prev_end = 0
     for m in models:
         if m.start_day <= ord_date <= m.end_day:
-            return m.class_vals[np.argmax(m.class_probs[0])]
+            return m.class_vals[np.argmax(m.class_probs)]
         elif prev_end < ord_date < m.start_day:
             return trans_class
 
@@ -42,7 +42,7 @@ def class_secondary(models, ord_date):
     prev_end = 0
     for m in models:
         if m.start_day <= ord_date <= m.end_day:
-            return m.class_vals[np.argsort(m.class_probs[0])[-2]]
+            return m.class_vals[np.argsort(m.class_probs)[-2]]
         elif prev_end < ord_date < m.start_day:
             return trans_class
 
@@ -62,12 +62,12 @@ def segchange(models, ord_date):
         yr = dt.date.fromordinal(m.end_day).year
 
         if yr == query_yr:
-            class_val = m.class_vals[np.argmax(m.class_probs[0])]
+            class_val = m.class_vals[np.argmax(m.class_probs)]
 
             if idx + 1 < len(models):
                 next_val = (models[idx + 1]
                             .class_vals[np.argmax(models[idx + 1]
-                                                  .class_probs[0])])
+                                                  .class_probs)])
             else:
                 next_val = 0
 
@@ -85,7 +85,7 @@ def conf_primary(models, ord_date):
     prev_end = 0
     for m in models:
         if m.start_day <= ord_date <= m.end_day:
-            return int(max(m.class_probs[0]) * 100)
+            return int(max(m.class_probs) * 100)
         elif prev_end < ord_date < m.start_day:
             return 100
 
@@ -101,7 +101,7 @@ def conf_secondary(models, ord_date):
     prev_end = 0
     for m in models:
         if m.start_day <= ord_date <= m.end_day:
-            return int(m.class_probs[0][np.argsort(m.class_probs[0])[-2]] * 100)
+            return int(m.class_probs[np.argsort(m.class_probs)[-2]] * 100)
         elif prev_end < ord_date < m.start_day:
             return 100
 
