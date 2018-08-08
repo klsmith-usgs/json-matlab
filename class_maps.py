@@ -26,7 +26,7 @@ QUERY_DATES = tuple(dt.date(year=i, month=7, day=1).toordinal()
 
 def getcolortable():
     ct = gdal.ColorTable()
-    ct.SetColorEntry(0, (0, 0, 0, 0))  # Black
+    ct.SetColorEntry(0, (0, 0, 0, 0))  # Black No data
     ct.SetColorEntry(1, (238, 0, 0, 0))  # Red Developed
     ct.SetColorEntry(2, (171, 112, 40, 0))  # Orange Ag
     ct.SetColorEntry(3, (227, 227, 194, 0))  # Yellow Grass

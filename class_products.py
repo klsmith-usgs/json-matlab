@@ -8,6 +8,7 @@ ClassModel = namedtuple('ClassModel', ['start_day', 'end_day',
                                        'class_probs', 'class_vals'])
 
 trans_class = 9
+nodata = 0
 
 
 def sort_models(models):
@@ -20,8 +21,11 @@ def sort_models(models):
 
 
 def class_primary(models, ord_date):
-    if ord_date <= 0:
-        return 0
+    if ord_date <= 0 or not models:
+        return nodata
+
+    if models[-1].end_day < ord_date or ord_date < models[0].start_day:
+        return nodata
 
     prev_end = 0
     for m in models:
@@ -32,12 +36,15 @@ def class_primary(models, ord_date):
 
         prev_end = m.end_day
 
-    return 0
+    return nodata
 
 
 def class_secondary(models, ord_date):
-    if ord_date <= 0:
-        return 0
+    if ord_date <= 0 or not models:
+        return nodata
+
+    if models[-1].end_day < ord_date or ord_date < models[0].start_day:
+        return nodata
 
     prev_end = 0
     for m in models:
@@ -48,7 +55,7 @@ def class_secondary(models, ord_date):
 
         prev_end = m.end_day
 
-    return 0
+    return nodata
 
 
 def segchange(models, ord_date):
